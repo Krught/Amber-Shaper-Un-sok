@@ -14,7 +14,7 @@ class Enemy {
         
         // Initialize properties
         this.maxHealth = this.getMaxHealth();
-        this.health = this.type === 'boss' ? 11250 : this.maxHealth; // Boss starts at 75% health
+        this.health = this.type === 'boss' ? (this.maxHealth * 0.85) : this.maxHealth; // Boss starts at 75% health
         this.willpower = this.getMaxWillpower();
         this.maxWillpower = this.getMaxWillpower();
         this.moveSpeed = this.getMoveSpeed();
@@ -56,9 +56,9 @@ class Enemy {
     getMaxHealth() {
         switch (this.type) {
             case 'boss':
-                return 15000; // Increased to 15,000 HP
+                return 30000; // Increased to 15,000 HP
             case 'amber-monstrosity':
-                return 10000; // 10,000 HP for Amber Monstrosity
+                return 20000; // 10,000 HP for Amber Monstrosity
             case 'wow-class':
                 return 50; // Lower health for WoW class enemies
             case 'construct':
