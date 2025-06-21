@@ -90,8 +90,9 @@ class GameScene extends Phaser.Scene {
         this.stackTimeout = 15000;
         this.targetIndicator = null;
         this.amberSpawnTimer = 0;
-        this.amberSpawnInterval = 15000;
+        this.amberSpawnInterval = 15;
         this.amberSpawnCount = 0;
+        this.playerPositions = []; // Initialize player positions array
         
         // New scoring system variables
         this.stackPoints = 0;
@@ -162,7 +163,7 @@ class GameScene extends Phaser.Scene {
         
         // Set up amber spawning timer
         this.amberSpawnTimer = 0;
-        this.amberSpawnInterval = 15000; // 15 seconds
+        this.amberSpawnInterval = 15; // 15 seconds
         this.amberSpawnCount = 0; // Track how many to spawn in current batch
         
         // Set up collision detection
@@ -499,10 +500,19 @@ class GameScene extends Phaser.Scene {
     */
     
     createAmberGlobule() {
-        const x = Phaser.Math.Between(100, this.cameras.main.width - 100);
-        const y = Phaser.Math.Between(100, this.cameras.main.height - 100);
-        const globule = new AmberGlobule(this, x, y);
-        this.amberGlobules.push(globule);
+        // Spawn at one of the 24 player positions
+        if (this.playerPositions && this.playerPositions.length > 0) {
+            const randomPosition = this.playerPositions[Phaser.Math.Between(0, this.playerPositions.length - 1)];
+            const globule = new AmberGlobule(this, randomPosition.x, randomPosition.y);
+            this.amberGlobules.push(globule);
+            console.log(`Created amber globule at player position: (${randomPosition.x.toFixed(1)}, ${randomPosition.y.toFixed(1)}) - Total globules: ${this.amberGlobules.length}`);
+        } else {
+            // Fallback to random position if player positions aren't available
+            const x = Phaser.Math.Between(100, this.cameras.main.width - 100);
+            const y = Phaser.Math.Between(100, this.cameras.main.height - 100);
+            const globule = new AmberGlobule(this, x, y);
+            this.amberGlobules.push(globule);
+        }
     }
     
     checkGameOver() {
@@ -1122,6 +1132,7 @@ class GameScene extends Phaser.Scene {
         
         // Create enemies with proper distribution
         this.enemies = [];
+        this.playerPositions = []; // Store the 24 player positions for amber globule spawning
         
         // Create ranged enemies
         for (let i = 0; i < rangedNeeded; i++) {
@@ -1136,6 +1147,9 @@ class GameScene extends Phaser.Scene {
             
             const enemy = new Enemy(this, x, y, 'wow-class', wowClass, true); // true = ranged
             this.enemies.push(enemy);
+            
+            // Store this position for amber globule spawning
+            this.playerPositions.push({ x, y });
         }
         
         // Create melee enemies
@@ -1151,16 +1165,100 @@ class GameScene extends Phaser.Scene {
             
             const enemy = new Enemy(this, x, y, 'wow-class', wowClass, false); // false = melee
             this.enemies.push(enemy);
+            
+            // Store this position for amber globule spawning
+            this.playerPositions.push({ x, y });
         }
         
+        // Apply healer classification and damage modifications
+        this.applyHealerSystem();
+        
         console.log(`Created ${this.enemies.length} enemies: ${rangedNeeded} ranged, ${meleeNeeded} melee`);
+        console.log(`Stored ${this.playerPositions.length} player positions for amber globule spawning`);
+    }
+
+    applyHealerSystem() {
+        // Random number of healers between 4-7
+        const healerCount = Phaser.Math.Between(4, 7);
+        console.log(`Applying healer system: ${healerCount} healers will be selected`);
+        
+        // Get all WoW class enemies
+        const wowClassEnemies = this.enemies.filter(enemy => enemy.type === 'wow-class');
+        
+        // Randomly select healers from the WoW class enemies
+        const selectedHealers = [];
+        const availableEnemies = [...wowClassEnemies];
+        
+        for (let i = 0; i < healerCount && availableEnemies.length > 0; i++) {
+            const randomIndex = Phaser.Math.Between(0, availableEnemies.length - 1);
+            const selectedEnemy = availableEnemies.splice(randomIndex, 1)[0];
+            selectedHealers.push(selectedEnemy);
+        }
+        
+        // Apply healer damage modifications
+        selectedHealers.forEach(enemy => {
+            const className = enemy.wowClass.name;
+            let healerDamage = 0;
+            
+            switch (className) {
+                case 'Priest':
+                    healerDamage = 2;
+                    break;
+                case 'Paladin':
+                    healerDamage = 0;
+                    break;
+                case 'Monk':
+                    healerDamage = 1;
+                    break;
+                case 'Druid':
+                    healerDamage = 0;
+                    break;
+                default:
+                    // For non-healer classes that were randomly selected, keep original damage
+                    healerDamage = enemy.wowClass.damage;
+                    break;
+            }
+            
+            // Update the enemy's damage
+            enemy.wowClass.damage = healerDamage;
+            enemy.attackDamage = healerDamage;
+            
+            // Mark as healer
+            enemy.isHealer = true;
+            
+            // Update the enemy's attack damage
+            enemy.updateAttackDamage();
+            
+            // Update sprite visual indicator for healers
+            if (enemy.sprite) {
+                enemy.sprite.setStrokeStyle(3, 0x00ff00); // Green border for healers
+            }
+            
+            console.log(`${className} classified as Healer/Ranged with ${healerDamage} damage`);
+        });
+        
+        console.log(`Healer system applied: ${selectedHealers.length} enemies classified as healers`);
+        
+        // Log summary of healer classes
+        const healerSummary = selectedHealers.map(enemy => ({
+            class: enemy.wowClass.name,
+            damage: enemy.wowClass.damage,
+            isRanged: enemy.isRangedAttacker
+        }));
+        console.log('Healer classes:', healerSummary);
     }
 
     updateAmberSpawning(delta) {
         this.amberSpawnTimer += delta / 1000;
         
+        // Debug logging every 5 seconds
+        if (Math.floor(this.gameTime) % 5 === 0 && this.gameTime % 5 < 0.1) {
+            console.log(`Amber spawning debug - Timer: ${this.amberSpawnTimer.toFixed(1)}s, Interval: ${this.amberSpawnInterval}s, Count: ${this.amberSpawnCount}, Game time: ${this.gameTime.toFixed(1)}s`);
+        }
+        
         // Check if it's time to start a new spawn cycle
         if (this.amberSpawnTimer >= this.amberSpawnInterval && this.amberSpawnCount === 0) {
+            console.log(`Starting amber spawn cycle - Timer: ${this.amberSpawnTimer.toFixed(1)}s, Interval: ${this.amberSpawnInterval}s`);
             this.amberSpawnTimer = 0;
             this.amberSpawnCount = 3; // Spawn 3 globules
             this.spawnAmberBatch();
@@ -1169,6 +1267,7 @@ class GameScene extends Phaser.Scene {
     
     spawnAmberBatch() {
         if (this.amberSpawnCount > 0) {
+            console.log(`Spawning amber globule ${4 - this.amberSpawnCount}/3`);
             this.createAmberGlobule();
             this.amberSpawnCount--;
             
@@ -1177,6 +1276,8 @@ class GameScene extends Phaser.Scene {
                 this.time.delayedCall(1000, () => {
                     this.spawnAmberBatch();
                 });
+            } else {
+                console.log('Amber spawn cycle complete');
             }
         }
     }
@@ -1246,6 +1347,18 @@ class GameScene extends Phaser.Scene {
                     bossHPFill.style.background = 'linear-gradient(to right, #ff6600, #ffaa66)';
                 } else {
                     bossHPFill.style.background = 'linear-gradient(to right, #ff0000, #ff3333)';
+                }
+                
+                // Add glowing effect for high stacks
+                if (this.amberShaperStacks >= 5) {
+                    bossHPFill.style.boxShadow = '0 0 10px #ffff00';
+                    bossHPFill.style.border = '2px solid #ffff00';
+                } else if (this.amberShaperStacks > 0) {
+                    bossHPFill.style.boxShadow = '0 0 5px #ffaa00';
+                    bossHPFill.style.border = '1px solid #ffaa00';
+                } else {
+                    bossHPFill.style.boxShadow = 'none';
+                    bossHPFill.style.border = 'none';
                 }
                 
                 // Force a reflow to ensure the width change is applied
@@ -1321,6 +1434,18 @@ class GameScene extends Phaser.Scene {
                     monstrosityHPFill.style.background = 'linear-gradient(to right, #ff4400, #ff8800)';
                 } else {
                     monstrosityHPFill.style.background = 'linear-gradient(to right, #ff2200, #ff6600)';
+                }
+                
+                // Add glowing effect for high stacks
+                if (this.monstrosityStacks >= 5) {
+                    monstrosityHPFill.style.boxShadow = '0 0 10px #ffff00';
+                    monstrosityHPFill.style.border = '2px solid #ffff00';
+                } else if (this.monstrosityStacks > 0) {
+                    monstrosityHPFill.style.boxShadow = '0 0 5px #ffaa00';
+                    monstrosityHPFill.style.border = '1px solid #ffaa00';
+                } else {
+                    monstrosityHPFill.style.boxShadow = 'none';
+                    monstrosityHPFill.style.border = 'none';
                 }
             }
         }

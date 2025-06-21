@@ -24,6 +24,9 @@ class Enemy {
         this.berserkTimer = 0;
         this.behaviorTimer = 0;
         
+        // Healer classification
+        this.isHealer = false;
+        
         // Debuffs
         this.debuffs = {};
         
@@ -79,8 +82,8 @@ class Enemy {
             case 'boss':
                 return 50;
             case 'wow-class':
-                if (this.wowClass && this.wowClass.damage) {
-                    return this.wowClass.damage; // Use class-specific damage
+                if (this.wowClass && this.wowClass.damage !== undefined) {
+                    return this.wowClass.damage; // Use class-specific damage (including healer modifications)
                 }
                 return 15; // Fallback damage
             case 'construct':
@@ -135,7 +138,13 @@ class Enemy {
         } else if (this.type === 'wow-class' && this.wowClass) {
             // WoW class enemies are colored circles
             this.sprite = this.scene.add.circle(this.x, this.y, 12, this.wowClass.color);
-            this.sprite.setStrokeStyle(2, 0x333333);
+            
+            // Add visual indicator for healers
+            if (this.isHealer) {
+                this.sprite.setStrokeStyle(3, 0x00ff00); // Green border for healers
+            } else {
+                this.sprite.setStrokeStyle(2, 0x333333); // Normal border
+            }
         } else {
             // Regular enemies are red circles
             this.sprite = this.scene.add.circle(this.x, this.y, 15, 0xff0000);
@@ -246,13 +255,42 @@ class Enemy {
     }
     
     updateWoWClassAI(delta) {
-        // WoW class enemies always target the boss
-        if (!this.target || this.target.type !== 'boss') {
-            this.target = this.scene.boss;
+        // WoW class enemies target Amber Monstrosity if it's alive, otherwise target the boss
+        let shouldChangeTarget = false;
+        
+        // Check if we need to change target
+        if (!this.target) {
+            shouldChangeTarget = true;
+        } else if (this.scene.amberMonstrosity && this.scene.amberMonstrosity.health > 0) {
+            // Amber Monstrosity is alive, should target it
+            if (this.target !== this.scene.amberMonstrosity) {
+                shouldChangeTarget = true;
+            }
+        } else {
+            // Amber Monstrosity is dead or doesn't exist, should target boss
+            if (this.target !== this.scene.boss) {
+                shouldChangeTarget = true;
+            }
+        }
+        
+        // Change target if needed
+        if (shouldChangeTarget) {
+            const oldTarget = this.target;
+            if (this.scene.amberMonstrosity && this.scene.amberMonstrosity.health > 0) {
+                this.target = this.scene.amberMonstrosity;
+                if (oldTarget !== this.target) {
+                    console.log(`${this.wowClass?.name || 'WoW Class'} now targeting Amber Monstrosity`);
+                }
+            } else {
+                this.target = this.scene.boss;
+                if (oldTarget !== this.target) {
+                    console.log(`${this.wowClass?.name || 'WoW Class'} now targeting Boss`);
+                }
+            }
         }
         
         if (this.target) {
-            const distanceToBoss = Phaser.Math.Distance.Between(
+            const distanceToTarget = Phaser.Math.Distance.Between(
                 this.sprite.x, this.sprite.y,
                 this.target.sprite.x, this.target.sprite.y
             );
@@ -262,28 +300,28 @@ class Enemy {
             
             if (isRanged) {
                 // Ranged attackers maintain their attack range distance
-                if (distanceToBoss <= attackRange) {
+                if (distanceToTarget <= attackRange) {
                     // In range, attack
-                    this.attackBoss();
-                } else if (distanceToBoss > attackRange + 2) {
+                    this.attackTarget();
+                } else if (distanceToTarget > attackRange + 2) {
                     // Too far, move closer
                     this.moveTowardsTarget(this.target, this.moveSpeed);
-                } else if (distanceToBoss < attackRange - 1) {
+                } else if (distanceToTarget < attackRange - 1) {
                     // Too close, move away
                     this.moveAwayFromTarget(this.target, this.moveSpeed);
                 }
                 // If in perfect range, don't move, just attack
             } else {
-                // Melee attackers move towards boss and attack when in range
+                // Melee attackers move towards target and attack when in range
                 this.moveTowardsTarget(this.target, this.moveSpeed);
                 
-                if (distanceToBoss <= attackRange) {
-                    this.attackBoss();
+                if (distanceToTarget <= attackRange) {
+                    this.attackTarget();
                 }
             }
             
-            // Deal indirect damage to player if close to boss
-            if (this.scene.player) {
+            // Deal indirect damage to player if close to boss (only when targeting boss)
+            if (this.scene.player && this.target === this.scene.boss) {
                 const distanceToPlayer = Phaser.Math.Distance.Between(
                     this.sprite.x, this.sprite.y,
                     this.scene.player.sprite.x, this.scene.player.sprite.y
@@ -408,16 +446,18 @@ class Enemy {
         });
     }
     
-    attackBoss() {
+    attackTarget() {
         if (this.attackCooldown <= 0) {
             this.attackCooldown = this.attackSpeed;
             
-            // Debug logging for attack speeds
-            if (this.wowClass) {
-                //console.log(`${this.wowClass.name} attacking boss with ${this.attackSpeed}ms cooldown (${this.attackSpeed/1000}s)`);
+            // Debug logging for attack speeds (only occasionally to reduce spam)
+            if (this.wowClass && Math.random() < 0.1) { // Only log 10% of attacks
+                const targetName = this.target === this.scene.boss ? 'Boss' : 
+                                  this.target === this.scene.amberMonstrosity ? 'Amber Monstrosity' : 'Unknown';
+                console.log(`${this.wowClass.name} attacking ${targetName} for ${this.attackDamage} damage`);
             }
             
-            // Deal damage to boss
+            // Deal damage to target
             if (this.target) {
                 this.target.takeDamage(this.attackDamage);
             }
@@ -447,6 +487,22 @@ class Enemy {
                 finalDamage *= (1 + debuff.value / 100);
             }
         });
+        
+        // Apply stack-based damage amplification (10% per stack)
+        let stackMultiplier = 1;
+        let stackCount = 0;
+        if (this.type === 'boss' && this.scene.amberShaperStacks > 0) {
+            stackMultiplier = 1 + (this.scene.amberShaperStacks * 0.1); // 10% per stack
+            stackCount = this.scene.amberShaperStacks;
+            finalDamage *= stackMultiplier;
+            console.log(`Boss taking ${amount} damage with ${this.scene.amberShaperStacks} stacks: ${amount} * ${stackMultiplier.toFixed(2)} = ${Math.round(finalDamage)}`);
+        } else if (this.type === 'amber-monstrosity' && this.scene.monstrosityStacks > 0) {
+            stackMultiplier = 1 + (this.scene.monstrosityStacks * 0.1); // 10% per stack
+            stackCount = this.scene.monstrosityStacks;
+            finalDamage *= stackMultiplier;
+            console.log(`Amber Monstrosity taking ${amount} damage with ${this.scene.monstrosityStacks} stacks: ${amount} * ${stackMultiplier.toFixed(2)} = ${Math.round(finalDamage)}`);
+        }
+        
         // Apply 99% damage reduction to boss if Amber Monstrosity is alive
         if (this.type === 'boss' && this.scene.amberMonstrosity && this.scene.amberMonstrosity.health > 0) {
             let reduced = finalDamage * 0.01;
@@ -455,6 +511,22 @@ class Enemy {
             finalDamage = Math.round(finalDamage);
         }
         this.health -= finalDamage;
+        
+        // Show damage number with color based on stack amplification
+        if (this.scene.uiManager) {
+            let damageColor = '#ff0000'; // Default red
+            if (stackCount > 0) {
+                if (stackCount >= 10) {
+                    damageColor = '#ff00ff'; // Magenta for 10+ stacks
+                } else if (stackCount >= 5) {
+                    damageColor = '#ff8800'; // Orange for 5+ stacks
+                } else {
+                    damageColor = '#ffff00'; // Yellow for 1-4 stacks
+                }
+            }
+            this.scene.uiManager.showDamageNumber(this.sprite.x, this.sprite.y - 30, finalDamage, damageColor);
+        }
+        
         // Visual feedback - only for circle sprites (WoW class enemies)
         if (this.type === 'wow-class' && this.wowClass) {
             this.sprite.setFillStyle(0xff0000);
@@ -610,5 +682,44 @@ class Enemy {
     
     isCasting() {
         return this.casting;
+    }
+    
+    getDamageMultiplier() {
+        let multiplier = 1;
+        
+        // Apply stack-based damage amplification only
+        if (this.type === 'boss' && this.scene.amberShaperStacks > 0) {
+            multiplier *= (1 + (this.scene.amberShaperStacks * 0.1)); // 10% per stack
+        } else if (this.type === 'amber-monstrosity' && this.scene.monstrosityStacks > 0) {
+            multiplier *= (1 + (this.scene.monstrosityStacks * 0.1)); // 10% per stack
+        }
+        
+        return multiplier;
+    }
+    
+    getStackOnlyMultiplier() {
+        // Get only the stack-based multiplier for display purposes
+        if (this.type === 'boss' && this.scene.amberShaperStacks > 0) {
+            return 1 + (this.scene.amberShaperStacks * 0.1); // 10% per stack
+        } else if (this.type === 'amber-monstrosity' && this.scene.monstrosityStacks > 0) {
+            return 1 + (this.scene.monstrosityStacks * 0.1); // 10% per stack
+        }
+        return 1;
+    }
+    
+    getStackCount() {
+        if (this.type === 'boss') {
+            return this.scene.amberShaperStacks || 0;
+        } else if (this.type === 'amber-monstrosity') {
+            return this.scene.monstrosityStacks || 0;
+        }
+        return 0;
+    }
+    
+    updateAttackDamage() {
+        // Update attack damage based on current wowClass damage value
+        if (this.type === 'wow-class' && this.wowClass) {
+            this.attackDamage = this.wowClass.damage;
+        }
     }
 } 
