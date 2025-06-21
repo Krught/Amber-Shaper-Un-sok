@@ -276,8 +276,8 @@ class Player {
             }
         }
         
-        // Check if Break Free is available (at 20% health)
-        this.canBreakFree = (this.health / this.maxHealth) <= 0.2;
+        // Break Free is always available - no health requirement
+        this.canBreakFree = true;
     }
     
     die() {
@@ -486,7 +486,7 @@ class Player {
     }
     
     useBreakFree() {
-        if (!this.canBreakFree || this.cooldowns['break-free'] > 0) {
+        if (this.cooldowns['break-free'] > 0) {
             return false;
         }
         
@@ -523,10 +523,6 @@ class Player {
     
     canUseAbility(ability) {
         if (this.cooldowns[ability] <= 0 && this.willpower >= this.abilityCosts[ability]) {
-            // Special check for Break Free
-            if (ability === 'break-free') {
-                return this.canBreakFree;
-            }
             // Special check for Amber Strike - cannot use while casting Amber Explosion
             if (ability === 'amber-strike') {
                 return !this.castingAmberExplosion;

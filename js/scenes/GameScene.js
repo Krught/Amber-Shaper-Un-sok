@@ -357,12 +357,36 @@ class GameScene extends Phaser.Scene {
             this.uiManager.update(this.player);
             this.uiManager.updateAbilityButtons(this.player);
             
-            // Update cast bar if player is casting Amber Explosion
-            if (this.player && this.player.castingAmberExplosion) {
+            // Update cast bar - prioritize Amber Monstrosity cast over player cast
+            if (this.amberMonstrosity && this.amberMonstrosity.castingAmberExplosion) {
+                const castProgress = (this.amberMonstrosity.amberExplosionCastTime / this.amberMonstrosity.amberExplosionCastDuration) * 100;
+                this.uiManager.updateCastBar(true, castProgress, 'boss', 'Amber Explosion');
+            } else if (this.player && this.player.castingAmberExplosion) {
                 const castProgress = (this.player.amberExplosionCastTime / this.player.amberExplosionCastDuration) * 100;
-                this.uiManager.updateCastBar(true, castProgress);
+                this.uiManager.updateCastBar(true, castProgress, 'self', 'Amber Explosion');
             } else {
                 this.uiManager.updateCastBar(false);
+            }
+            
+            // Update boss explosion timer
+            if (this.amberMonstrosity && this.amberMonstrosity.health > 0) {
+                let timeRemaining;
+                if (this.amberMonstrosity.amberExplosionCooldown > 0) {
+                    // Show cooldown remaining
+                    timeRemaining = this.amberMonstrosity.amberExplosionCooldown;
+                } else {
+                    // Show time until next cast (timer counts up, so subtract from interval)
+                    timeRemaining = this.amberMonstrosity.amberExplosionInterval - this.amberMonstrosity.amberExplosionTimer;
+                }
+                console.log(`Boss explosion timer debug:`);
+                console.log(`  - amberExplosionInterval: ${this.amberMonstrosity.amberExplosionInterval}ms`);
+                console.log(`  - amberExplosionTimer: ${this.amberMonstrosity.amberExplosionTimer}ms`);
+                console.log(`  - amberExplosionCooldown: ${this.amberMonstrosity.amberExplosionCooldown}ms`);
+                console.log(`  - Calculated timeRemaining: ${timeRemaining}ms (${Math.ceil(timeRemaining/1000)}s)`);
+                this.uiManager.updateBossExplosionTimer(timeRemaining);
+            } else {
+                console.log('No Amber Monstrosity or it\'s dead, hiding timer');
+                this.uiManager.updateBossExplosionTimer(0);
             }
         }
         

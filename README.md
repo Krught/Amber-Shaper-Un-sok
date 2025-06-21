@@ -1,6 +1,6 @@
 # Amber-Shaper Un'sok Construct Simulator
 
-A browser-based game that simulates the Mutated Construct mechanics from the Amber-Shaper Un'sok boss fight in World of Warcraft: Mists of Pandaria. Built with Phaser 3 and modern web technologies.
+A browser-based game that simulates the Mutated Construct mechanics from the Amber-Shaper Un'sok boss fight in World of Warcraft: Mists of Pandaria. Built with Phaser 3, PHP, and modern web technologies.
 
 ## 🎮 Game Overview
 
@@ -8,19 +8,61 @@ You play as a Mutated Construct, a transformed player character with unique abil
 
 ## 🚀 How to Run
 
-1. **Simple Setup**: Just open `index.html` in a modern web browser
-2. **Local Server** (recommended): 
-   ```bash
-   # Using Python 3
-   python -m http.server 8000
-   
-   # Using Node.js
-   npx http-server
-   
-   # Using PHP
-   php -S localhost:8000
-   ```
-3. Navigate to `http://localhost:8000` in your browser
+### Prerequisites
+- A modern web browser (Chrome, Firefox, Safari, Edge)
+- One of the following server options (recommended) or just open the file directly
+
+### Option 1: PHP Development Server (Recommended)
+Since this project uses PHP for version control and caching, the PHP development server is the best option:
+
+```bash
+# Navigate to the project directory
+cd "F:\Amber-Shaper Un'sok"
+
+# Start PHP development server
+php -S localhost:8000
+
+# Open your browser and go to:
+# http://localhost:8000
+```
+
+**Why PHP?** This project uses PHP to add version parameters to JavaScript files for cache busting, ensuring you always get the latest version of the game files.
+
+### Option 2: Python HTTP Server
+```bash
+# Python 3
+python -m http.server 8000
+
+# Python 2 (if you have it)
+python -m SimpleHTTPServer 8000
+
+# Then visit: http://localhost:8000
+```
+
+### Option 3: Node.js HTTP Server
+```bash
+# Install http-server globally (one-time setup)
+npm install -g http-server
+
+# Or use npx to run without installing
+npx http-server
+
+# Then visit: http://localhost:8080
+```
+
+### Option 4: Direct File Opening (Not Recommended)
+You can open `index.php` directly in your browser by double-clicking it, but some features may not work properly due to browser security restrictions.
+
+### Option 5: XAMPP/WAMP/MAMP
+If you have a local web server stack installed:
+1. Copy the project files to your web server's document root
+2. Access via `http://localhost/your-project-folder`
+
+## 🔧 Server Requirements
+
+- **PHP**: 7.0 or higher (for PHP development server)
+- **Web Server**: Any modern web server (Apache, Nginx, etc.) or development server
+- **Browser**: Modern browser with JavaScript enabled
 
 ## 🎯 How to Play
 
@@ -166,10 +208,32 @@ Final Score = (Base Score + Stack Points) × Time Multiplier
 ## 🛠️ Technical Details
 
 - **Engine**: Phaser 3.60.0
-- **Language**: JavaScript (ES6+)
+- **Frontend**: JavaScript (ES6+), HTML5, CSS3
+- **Backend**: PHP 7.0+ (for version control and cache busting)
 - **Graphics**: Canvas-based with particle systems
 - **Physics**: Arcade physics for collision detection
 - **UI**: Modern CSS with animations and responsive design
+- **Version Control**: PHP-based cache busting system with version parameters
+
+### 🗂️ Project Structure
+```
+Amber-Shaper Un'sok/
+├── index.php              # Main entry point with PHP version control
+├── styles.css             # Game styling and UI
+├── js/                    # JavaScript game files
+│   ├── game.js           # Main game configuration
+│   ├── main.js           # Game initialization
+│   ├── entities/         # Game entity classes
+│   ├── scenes/           # Game scene management
+│   └── ui/               # UI management
+└── img/                  # Game assets and sprites
+```
+
+### 🔄 Version Control System
+The project uses PHP to add version parameters to JavaScript files, ensuring browsers always load the latest version:
+- Version number is defined in `index.php` at the top
+- All script tags include `?v=<?php echo $version; ?>` for cache busting
+- Update the `$version` variable in `index.php` to force browser cache refresh
 
 ## 🎵 Game Design Philosophy
 

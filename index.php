@@ -1,3 +1,8 @@
+<?php
+
+$version = 1;
+
+?>
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -37,20 +42,23 @@
                     
                     <h3>⚡ Abilities</h3>
                     <ul>
-                        <li><strong>Amber Strike (1):</strong> Inflicts 332,500-367,500 Nature damage and interrupts spellcasting. Destabilizes target, increasing damage taken by 10% for 1 min (stacks).</li>
+                        <li><strong>Amber Strike (1):</strong> Inflicts 332,500-367,500 Nature damage and interrupts spellcasting. Destabilizes target, increasing damage taken by 10% for 1 min (stacks). <strong>CRITICAL:</strong> Use this to interrupt the Amber Monstrosity's Amber Explosion cast!</li>
                         <li><strong>Struggle for Control (2):</strong> Expend 8 Willpower to force the form to cease action for 0.5 sec and increase damage taken by 100% for 5 sec. <strong>CRITICAL:</strong> Use this to interrupt your own Amber Explosion cast!</li>
                         <li><strong>Consume Amber (3):</strong> Consume Burning Amber pools to restore 20 Willpower (50 in Phase 3) and increase health by 6,300,000.</li>
-                        <li><strong>Break Free (4):</strong> Available at 20% health - regain your natural form.</li>
+                        <li><strong>Break Free (4):</strong> Always available - regain your natural form and end the game.</li>
                     </ul>
                     
                     <h3>⚠️ Critical Rules</h3>
                     <ul>
                         <li>Willpower drains at 2 per second - keep it above 0 or you'll die!</li>
-                        <li><strong>WARNING:</strong> You periodically cast "Amber Explosion" over 3 seconds - this will kill you if not interrupted!</li>
+                        <li><strong>WARNING:</strong> You periodically cast "Amber Explosion" over 2.5 seconds - this will kill you if not interrupted!</li>
                         <li>Use Struggle for Control (2) to interrupt your own Amber Explosion cast</li>
+                        <li><strong>NEW:</strong> When the Amber Monstrosity is alive, it also casts "Amber Explosion" over 2.5 seconds every 50 seconds</li>
+                        <li><strong>CRITICAL:</strong> To interrupt the Amber Monstrosity's cast, target it and press 1 (Amber Strike)</li>
+                        <li>Cast bars show "Self: Amber Explosion (2)" for your cast and "Boss: Amber Explosion (1)" for the monstrosity's cast</li>
                         <li>Amber Strike interrupts enemy spellcasting</li>
                         <li>Consume Amber strategically to restore Willpower</li>
-                        <li>Break Free becomes available at 20% health</li>
+                        <li>Break Free can be used at any time to end the game</li>
                     </ul>
                     
                     <h3>🏆 Scoring System</h3>
@@ -123,6 +131,7 @@
                         <span id="phase-text">Phase 1</span>
                         <span id="timer">00:00</span>
                         <span>Score: <span id="score-value">0</span></span>
+                        <span id="boss-explosion-timer" style="display: none;">Next Boss Explosion: <span id="boss-explosion-countdown">50s</span></span>
                     </div>
                 </div>
                 
@@ -147,13 +156,13 @@
         <div id="phaser-game"></div>
     </div>
     
-    <script src="js/game.js"></script>
-    <script src="js/scenes/TitleScene.js"></script>
-    <script src="js/scenes/GameScene.js"></script>
-    <script src="js/entities/Player.js"></script>
-    <script src="js/entities/Enemy.js"></script>
-    <script src="js/entities/AmberGlobule.js"></script>
-    <script src="js/ui/UIManager.js"></script>
-    <script src="js/main.js"></script>
+    <script src="js/game.js?v=<?php echo $version; ?>"></script>
+    <script src="js/scenes/TitleScene.js?v=<?php echo $version; ?>"></script>
+    <script src="js/scenes/GameScene.js?v=<?php echo $version; ?>"></script>
+    <script src="js/entities/Player.js?v=<?php echo $version; ?>"></script>
+    <script src="js/entities/Enemy.js?v=<?php echo $version; ?>"></script>
+    <script src="js/entities/AmberGlobule.js?v=<?php echo $version; ?>"></script>
+    <script src="js/ui/UIManager.js?v=<?php echo $version; ?>"></script>
+    <script src="js/main.js?v=<?php echo $version; ?>"></script>
 </body>
 </html> 

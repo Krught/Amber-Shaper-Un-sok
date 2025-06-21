@@ -6,6 +6,13 @@ class UIManager {
         this.initializeAbilityButtons();
         this.setupEventListeners();
         this.addCSSAnimations();
+        
+        // Test if timer elements exist
+        const timerElement = document.getElementById('boss-explosion-timer');
+        const countdownElement = document.getElementById('boss-explosion-countdown');
+        console.log('UIManager constructor - Timer elements check:');
+        console.log(`boss-explosion-timer found: ${!!timerElement}`);
+        console.log(`boss-explosion-countdown found: ${!!countdownElement}`);
     }
     
     initializeAbilityButtons() {
@@ -185,7 +192,7 @@ class UIManager {
         const data = {
             'amber-strike': {
                 name: 'Amber Strike',
-                description: 'Inflicts 332,500-367,500 Nature damage and interrupts spellcasting. Destabilizes target, increasing damage taken by 10% for 1 min (stacks).',
+                description: 'Inflicts 332,500-367,500 Nature damage and interrupts spellcasting. Destabilizes target, increasing damage taken by 10% for 1 min (stacks). CRITICAL: Use this to interrupt the Amber Monstrosity\'s Amber Explosion cast!',
                 cost: 5,
                 cooldown: 3
             },
@@ -203,7 +210,7 @@ class UIManager {
             },
             'break-free': {
                 name: 'Break Free',
-                description: 'Available at 20% health - regain your natural form and restore full health/willpower.',
+                description: 'Always available - regain your natural form and end the game.',
                 cost: 0,
                 cooldown: 0
             }
@@ -375,32 +382,60 @@ class UIManager {
         }
     }
     
-    updateCastBar(isCasting, castProgress = 0) {
+    updateCastBar(isCasting, castProgress = 0, caster = 'self', spellName = 'Amber Explosion') {
         const castBar = document.getElementById('cast-bar');
         const castBarFill = document.querySelector('.cast-bar-fill');
+        const castBarText = document.querySelector('.cast-bar-text');
         
         if (isCasting) {
             castBar.style.display = 'block';
             castBarFill.style.width = `${castProgress}%`;
+            
+            // Update cast bar text based on caster
+            if (caster === 'self') {
+                castBarText.textContent = `Self: ${spellName} (2)`;
+            } else if (caster === 'boss') {
+                castBarText.textContent = `Boss: ${spellName} (1)`;
+            } else {
+                castBarText.textContent = `${caster}: ${spellName}`;
+            }
         } else {
             castBar.style.display = 'none';
             castBarFill.style.width = '0%';
+            castBarText.textContent = '';
+        }
+    }
+    
+    updateBossExplosionTimer(timeRemaining) {
+        const timerElement = document.getElementById('boss-explosion-timer');
+        const countdownElement = document.getElementById('boss-explosion-countdown');
+        
+        console.log(`updateBossExplosionTimer called with ${timeRemaining}ms`);
+        console.log(`Timer element found: ${!!timerElement}`);
+        console.log(`Countdown element found: ${!!countdownElement}`);
+        
+        if (timerElement && countdownElement) {
+            if (timeRemaining > 0) {
+                timerElement.style.display = 'inline';
+                countdownElement.textContent = `${Math.ceil(timeRemaining / 1000)}s`;
+                console.log(`Timer displayed: ${Math.ceil(timeRemaining / 1000)}s`);
+            } else {
+                timerElement.style.display = 'none';
+                console.log('Timer hidden');
+            }
+        } else {
+            console.log('Timer elements not found!');
         }
     }
     
     updateAbilityButtons(player) {
         if (!player) return;
         
-        // Update Break Free button
+        // Update Break Free button - always available
         const breakFreeBtn = document.querySelector('[data-ability="break-free"]');
         if (breakFreeBtn) {
-            if (player.canBreakFree) {
-                breakFreeBtn.classList.add('available');
-                breakFreeBtn.classList.remove('disabled');
-            } else {
-                breakFreeBtn.classList.remove('available');
-                breakFreeBtn.classList.add('disabled');
-            }
+            breakFreeBtn.classList.add('available');
+            breakFreeBtn.classList.remove('disabled');
         }
     }
     

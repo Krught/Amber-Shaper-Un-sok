@@ -7,6 +7,11 @@ class Enemy {
         this.wowClass = wowClass; // For WoW class enemies
         this.isRangedAttacker = isRangedAttacker; // For ranged WoW class enemies
         
+        // Debug logging for Amber Monstrosity
+        if (type === 'amber-monstrosity') {
+            console.log('Amber Monstrosity created with type:', type);
+        }
+        
         // Initialize properties
         this.maxHealth = this.getMaxHealth();
         this.health = this.type === 'boss' ? 11250 : this.maxHealth; // Boss starts at 75% health
@@ -29,6 +34,14 @@ class Enemy {
         
         // Debuffs
         this.debuffs = {};
+        
+        // Amber Explosion casting mechanics (for Amber Monstrosity)
+        this.castingAmberExplosion = false;
+        this.amberExplosionCastTime = 0;
+        this.amberExplosionCastDuration = 2500; // 2.5 seconds
+        this.amberExplosionInterval = 50000; // Cast every 50 seconds
+        this.amberExplosionTimer = 0; // Start at 0, count up to interval
+        this.amberExplosionCooldown = 0; // Cooldown after interrupt
         
         // Create sprite and effects
         this.createSprite();
@@ -207,6 +220,15 @@ class Enemy {
         // Update debuffs
         this.updateDebuffs(delta);
         
+        // Update Amber Explosion cast for Amber Monstrosity
+        if (this.type === 'amber-monstrosity') {
+            // Debug logging
+            if (Math.random() < 0.001) { // Very rare logging to avoid spam
+                console.log('Amber Monstrosity update called, type:', this.type);
+            }
+            this.updateAmberExplosionCast(delta);
+        }
+        
         // Update AI behavior
         this.updateAI(delta);
         
@@ -244,6 +266,28 @@ class Enemy {
                 delete this.debuffs[debuffName];
             }
         });
+    }
+    
+    updateAmberExplosionCast(delta) {
+        // Handle Amber Explosion casting for Amber Monstrosity
+        this.amberExplosionTimer += delta;
+        this.amberExplosionCooldown -= delta;
+        
+        // Debug logging
+        if (this.type === 'amber-monstrosity' && Math.random() < 0.01) { // Log 1% of the time to avoid spam
+            console.log(`Amber Monstrosity timer update: ${this.amberExplosionTimer}ms / ${this.amberExplosionInterval}ms`);
+        }
+        
+        if (this.amberExplosionTimer >= this.amberExplosionInterval && !this.castingAmberExplosion && this.amberExplosionCooldown <= 0) {
+            this.startAmberExplosionCast();
+        }
+        
+        if (this.castingAmberExplosion) {
+            this.amberExplosionCastTime += delta;
+            if (this.amberExplosionCastTime >= this.amberExplosionCastDuration) {
+                this.completeAmberExplosion();
+            }
+        }
     }
     
     updateAI(delta) {
@@ -673,10 +717,51 @@ class Enemy {
         this.die();
     }
     
+    updateAttackDamage() {
+        // Update attack damage based on current wowClass damage value
+        if (this.type === 'wow-class' && this.wowClass) {
+            this.attackDamage = this.wowClass.damage;
+        }
+    }
+    
+    startAmberExplosionCast() {
+        this.castingAmberExplosion = true;
+        this.amberExplosionCastTime = 0;
+        this.amberExplosionTimer = 0; // Reset the timer when starting cast
+        console.log('WARNING: Amber Monstrosity starting Amber Explosion cast! Target it and press 1 to interrupt!');
+    }
+    
+    completeAmberExplosion() {
+        this.castingAmberExplosion = false;
+        this.amberExplosionCastTime = 0;
+        this.amberExplosionTimer = 0; // Reset timer to start counting down to next cast
+        
+        // Deal massive damage to all players (in this case, just the player)
+        if (this.scene.player) {
+            this.scene.player.takeDamage(500000); // 500,000 damage
+            console.log('Amber Monstrosity Amber Explosion completed! Player took 500,000 damage!');
+        }
+        
+        // Trigger game over - player blew up
+        if (this.scene) {
+            this.scene.endGame('You blew up! The Amber Monstrosity\'s Amber Explosion killed you. The raid leader called wipe.');
+        }
+    }
+    
     interruptSpellcasting() {
         // Interrupt any ongoing spellcasting
         this.casting = false;
         this.castTime = 0;
+        
+        // Interrupt Amber Explosion if casting
+        if (this.castingAmberExplosion) {
+            this.castingAmberExplosion = false;
+            this.amberExplosionCastTime = 0;
+            this.amberExplosionCooldown = 6000; // 6-second cooldown after interrupt
+            this.amberExplosionTimer = 0; // Reset timer to start counting down to next cast
+            console.log('Amber Monstrosity Amber Explosion interrupted! 6-second cooldown applied.');
+        }
+        
         console.log('Enemy spellcasting interrupted');
     }
     
@@ -714,12 +799,5 @@ class Enemy {
             return this.scene.monstrosityStacks || 0;
         }
         return 0;
-    }
-    
-    updateAttackDamage() {
-        // Update attack damage based on current wowClass damage value
-        if (this.type === 'wow-class' && this.wowClass) {
-            this.attackDamage = this.wowClass.damage;
-        }
     }
 } 
