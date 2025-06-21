@@ -358,7 +358,7 @@ class AmberShaperGame {
         const titleScoreValue = document.getElementById('title-score-value');
         
         if (resultArea && resultMessage && titleScoreValue) {
-            resultMessage.textContent = `Boss Killed: ${reason}`;
+            resultMessage.textContent = reason;
             resultMessage.className = 'result-message success';
             titleScoreValue.textContent = this.score;
             resultArea.classList.remove('hidden');

@@ -527,7 +527,7 @@ class GameScene extends Phaser.Scene {
             console.log('Boss defeated! Health:', this.boss.health, 'Max health:', this.boss.maxHealth);
             this.bossKillTime = this.gameTime; // Record kill time for scoring
             console.log(`Boss killed in ${this.bossKillTime.toFixed(1)} seconds`);
-            this.endGame('Victory! You defeated Amber-Shaper Un\'sok!');
+            this.endGameSuccess('You killed Amber-Shaper Un\'sok!');
             return;
         }
         
