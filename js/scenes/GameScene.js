@@ -434,14 +434,9 @@ class GameScene extends Phaser.Scene {
                 this.phase = 2;
                 this.startPhase2();
             }
-        } else if (this.boss && this.phase === 2) {
-            const bossHealthPercent = (this.boss.health / this.boss.maxHealth) * 100;
-            
-            if (bossHealthPercent <= 30) {
-                this.phase = 3;
-                this.startPhase3();
-            }
         }
+        // Phase 3 is now triggered by Amber Monstrosity death, not boss health
+        // Removed the Phase 2 -> Phase 3 transition based on boss health
     }
     
     startPhase2() {
@@ -455,20 +450,31 @@ class GameScene extends Phaser.Scene {
             window.amberShaperGame.setPhase(this.phase);
         }
         
-        // Show phase transition message
-        this.showPhaseTransitionMessage('Phase 2: The Amber-Shaper summons an Amber Monstrosity!');
+        // No popup message - removed showPhaseTransitionMessage call
     }
     
     startPhase3() {
-        console.log('Phase 3 started - Boss health at 30% or below');
+        console.log('Phase 3 started - Amber Monstrosity defeated');
+        
+        // Move boss to the exact center of the room
+        if (this.boss) {
+            const centerX = this.cameras.main.width / 2;
+            const centerY = this.cameras.main.height / 2;
+            
+            // Set boss movement target to center
+            this.boss.moveTarget = { x: centerX, y: centerY };
+            this.boss.moveSpeed = 190; // 95% of player's 200 speed
+            this.boss.isMoving = true;
+            
+            console.log(`Boss moving to center of room: (${centerX}, ${centerY})`);
+        }
         
         // Update UI
         if (window.amberShaperGame) {
             window.amberShaperGame.setPhase(this.phase);
         }
         
-        // Show phase transition message
-        this.showPhaseTransitionMessage('Phase 3: The Amber-Shaper enters his final form!');
+        // No popup message - removed showPhaseTransitionMessage call
     }
     
     // DISABLED: No additional enemies spawn after game start
@@ -648,8 +654,13 @@ class GameScene extends Phaser.Scene {
             monstrosityStacksContainer.remove();
         }
         
-        // Show message
-        this.showPhaseTransitionMessage('Amber Monstrosity Defeated! Boss is vulnerable again!');
+        // Start Phase 3 when Amber Monstrosity is defeated
+        if (this.phase === 2) {
+            this.phase = 3;
+            this.startPhase3();
+        }
+        
+        // No popup message - removed showPhaseTransitionMessage call
     }
     
     removeGlobule(globule) {

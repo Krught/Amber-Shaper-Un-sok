@@ -68,23 +68,25 @@ You play as a Mutated Construct, a transformed player character with unique abil
 
 ### 🎭 Game Phases
 
-#### Phase 1 (0-30 seconds)
+#### Phase 1 (Boss health 100%-70%)
 - Basic mechanics introduction
-- One player transformed at a time
 - Focus on learning willpower management
 - Use Amber Strike to stack debuff on boss
+- Boss is vulnerable to damage
 
-#### Phase 2 (30-60 seconds)
-- Enemy Mutated Constructs spawn
-- Interrupt enemy constructs to prevent berserk
-- Boss becomes more aggressive
-- Multiple constructs may be active
+#### Phase 2 (Boss health 70%-0% with Amber Monstrosity alive)
+- Amber Monstrosity spawns
+- Boss gains 99% damage reduction while Amber Monstrosity is alive
+- All WoW class enemies target the Amber Monstrosity
+- Focus on defeating the Amber Monstrosity to remove boss damage reduction
+- Use Amber Strike on Amber Monstrosity to build stacks
 
-#### Phase 3 (60+ seconds)
-- Maximum chaos and difficulty
-- Multiple enemy constructs
-- Boss gains construct abilities
-- Critical willpower management required
+#### Phase 3 (After Amber Monstrosity is defeated)
+- Boss damage reduction is removed
+- All WoW class enemies target the boss again
+- Boss becomes vulnerable to full damage
+- Critical willpower management required for final push
+- Use Amber Strike on boss to build stacks for maximum damage
 
 ### 🎯 Objectives
 
