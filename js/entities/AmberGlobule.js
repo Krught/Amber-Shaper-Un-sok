@@ -14,6 +14,10 @@ class AmberGlobule {
         this.pulseSpeed = 2;
         this.baseScale = 1;
         
+        // Phase 3 despawning properties
+        this.phase3DespawnTimer = 0;
+        this.nextDespawnCheck = this.getRandomDespawnInterval();
+        
         // Create sprite as a small yellow circle
         this.sprite = this.scene.add.circle(x, y, 8, 0xffd700);
         this.sprite.setStrokeStyle(1, 0xffb300);
@@ -126,6 +130,11 @@ class AmberGlobule {
         //     return;
         // }
         
+        // Phase 3 despawning logic
+        if (this.scene.phase >= 3) {
+            this.updatePhase3Despawning(delta);
+        }
+        
         // Update pulse effect
         this.pulseTimer += delta / 1000;
         const pulse = Math.sin(this.pulseTimer * this.pulseSpeed) * 0.1 + 1;
@@ -139,6 +148,56 @@ class AmberGlobule {
         
         // Update visual based on age - REMOVED: no age-based visual changes
         // this.updateVisual();
+    }
+    
+    updatePhase3Despawning(delta) {
+        this.phase3DespawnTimer += delta / 1000;
+        
+        if (this.phase3DespawnTimer >= this.nextDespawnCheck) {
+            // Reset timer and set next check interval
+            this.phase3DespawnTimer = 0;
+            this.nextDespawnCheck = this.getRandomDespawnInterval();
+            
+            // 50% chance to despawn
+            if (Math.random() < 0.5) {
+                console.log('Amber globule despawning due to Phase 3 check');
+                this.despawn();
+            }
+        }
+    }
+    
+    getRandomDespawnInterval() {
+        // Return a random interval between 6 and 12 seconds
+        return Phaser.Math.Between(6, 12);
+    }
+    
+    despawn() {
+        // Create despawn effect
+        const despawnEffect = this.scene.add.graphics();
+        despawnEffect.fillStyle(0xff6b35, 0.8); // Orange effect for despawn
+        despawnEffect.fillCircle(0, 0, 12);
+        
+        despawnEffect.x = this.sprite.x;
+        despawnEffect.y = this.sprite.y;
+        
+        // Expand and fade animation
+        this.scene.tweens.add({
+            targets: despawnEffect,
+            scaleX: 2,
+            scaleY: 2,
+            alpha: 0,
+            duration: 1000,
+            ease: 'Power2',
+            onComplete: () => {
+                despawnEffect.destroy();
+            }
+        });
+        
+        // Remove from scene
+        this.scene.removeGlobule(this);
+        
+        // Destroy immediately
+        this.destroy();
     }
     
     updateEffects() {

@@ -40,9 +40,9 @@ class Player {
         // Amber Explosion casting mechanics
         this.castingAmberExplosion = false;
         this.amberExplosionCastTime = 0;
-        this.amberExplosionCastDuration = 3000; // 3 seconds
+        this.amberExplosionCastDuration = 2500; // 2.5 seconds
         this.amberExplosionTimer = 0;
-        this.amberExplosionInterval = 15000; // Cast every 15 seconds
+        this.amberExplosionInterval = 13000; // Cast every 13 seconds
         this.amberExplosionCooldown = 0; // 6-second cooldown after interrupt
         
         // Break Free mechanics
