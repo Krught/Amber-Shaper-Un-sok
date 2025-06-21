@@ -59,6 +59,7 @@ $version = 1;
                         <li>Amber Strike interrupts enemy spellcasting</li>
                         <li>Consume Amber strategically to restore Willpower</li>
                         <li>Break Free can be used at any time to end the game</li>
+                        <li><strong>Visual Feedback:</strong> Your character glows red when within melee range (50 pixels) of your target</li>
                     </ul>
                     
                     <h3>🏆 Scoring System</h3>
@@ -156,6 +157,12 @@ $version = 1;
         <div id="phaser-game"></div>
     </div>
     
+    <!-- Welcome and Version Info -->
+    <div id="welcome-info" style="position: fixed; bottom: 10px; left: 10px; color: #cccccc; font-size: 12px; text-shadow: 1px 1px 2px rgba(0,0,0,0.8); z-index: 1000; font-family: Arial, sans-serif; opacity: 0.8;">
+        Created by Remour on Benediction<br>
+        Version: <?php echo $version; ?>
+    </div>
+
     <script src="js/game.js?v=<?php echo $version; ?>"></script>
     <script src="js/scenes/TitleScene.js?v=<?php echo $version; ?>"></script>
     <script src="js/scenes/GameScene.js?v=<?php echo $version; ?>"></script>

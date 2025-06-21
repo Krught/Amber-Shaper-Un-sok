@@ -6,6 +6,13 @@ A browser-based game that simulates the Mutated Construct mechanics from the Amb
 
 You play as a Mutated Construct, a transformed player character with unique abilities and a critical willpower management system. Your goal is to help defeat Amber-Shaper Un'sok while managing your willpower to avoid going berserk.
 
+## 🌐 Play Online
+
+**You can play the game directly in your browser by visiting:**
+**https://ambershaper.raidassignments.com/**
+
+No installation or setup required - just open the link and start playing!
+
 ## 🚀 How to Run
 
 ### Prerequisites
@@ -73,6 +80,8 @@ If you have a local web server stack installed:
   - `2` or click button: Struggle For Control
   - `3` or click button: Consume Amber
   - `4` or click button: Break Free
+- **Targeting**: Click on enemies to target them
+- **Visual Feedback**: Your character glows red when within melee range (50 pixels) of your target
 
 ### Core Mechanics
 
