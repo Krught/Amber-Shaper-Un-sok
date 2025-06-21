@@ -1,0 +1,107 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Amber-Shaper Un'sok Construct Simulator</title>
+    <script src="https://cdn.jsdelivr.net/npm/phaser@3.60.0/dist/phaser.min.js"></script>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <div id="game-container">
+        <div id="game-ui">
+            <div id="title-screen" class="screen">
+                <h1>Amber-Shaper Un'sok</h1>
+                <h2>Construct Simulator</h2>
+                <p>Master the Mutated Construct mechanics!</p>
+                <button id="start-game">Start Training</button>
+                <button id="instructions-btn">Instructions</button>
+            </div>
+            
+            <div id="instructions-screen" class="screen hidden">
+                <h2>How to Play</h2>
+                <div class="instructions-content">
+                    <h3>🎯 Your Mission</h3>
+                    <p>You are a Mutated Construct! Control your Willpower and help defeat Amber-Shaper Un'sok.</p>
+                    
+                    <h3>⚡ Abilities</h3>
+                    <ul>
+                        <li><strong>Amber Strike (1):</strong> Inflicts 332,500-367,500 Nature damage and interrupts spellcasting. Destabilizes target, increasing damage taken by 10% for 1 min (stacks).</li>
+                        <li><strong>Struggle for Control (2):</strong> Expend 8 Willpower to force the form to cease action for 0.5 sec and increase damage taken by 100% for 5 sec. <strong>CRITICAL:</strong> Use this to interrupt your own Amber Explosion cast!</li>
+                        <li><strong>Consume Amber (3):</strong> Consume Burning Amber pools to restore 20 Willpower (50 in Phase 3) and increase health by 6,300,000.</li>
+                        <li><strong>Break Free (4):</strong> Available at 20% health - regain your natural form.</li>
+                    </ul>
+                    
+                    <h3>⚠️ Critical Rules</h3>
+                    <ul>
+                        <li>Willpower drains at 2 per second - keep it above 0 or you'll die!</li>
+                        <li><strong>WARNING:</strong> You periodically cast "Amber Explosion" over 3 seconds - this will kill you if not interrupted!</li>
+                        <li>Use Struggle for Control (2) to interrupt your own Amber Explosion cast</li>
+                        <li>Amber Strike interrupts enemy spellcasting</li>
+                        <li>Consume Amber strategically to restore Willpower</li>
+                        <li>Break Free becomes available at 20% health</li>
+                    </ul>
+                </div>
+                <button id="back-to-title">Back to Title</button>
+            </div>
+            
+            <div id="game-screen" class="screen hidden">
+                <div id="game-ui">
+                    <div id="willpower-bar" class="bar">
+                        <div id="willpower-fill" class="bar-fill"></div>
+                    </div>
+                    <span id="willpower-text">100/100</span>
+                    
+                    <div id="game-info">
+                        <span id="phase-text">Phase 1</span>
+                        <span id="timer">00:00</span>
+                        <span>Score: <span id="score-value">0</span></span>
+                    </div>
+                </div>
+                
+                <div id="cast-bar" style="display: none;">
+                    <div class="cast-bar-bg">
+                        <div class="cast-bar-fill"></div>
+                        <div class="cast-bar-text">Amber Explosion</div>
+                    </div>
+                </div>
+                
+                <div id="game-over-screen" class="overlay hidden">
+                    <div class="game-over-content">
+                        <h2>Game Over</h2>
+                        <p id="game-over-reason">You failed!</p>
+                        <button id="restart-btn" class="btn">Restart Game</button>
+                    </div>
+                </div>
+                
+                <div id="success-screen" class="overlay hidden">
+                    <div class="success-content">
+                        <h2>Success!</h2>
+                        <p id="success-message">You jumped out before you exploded, good job!</p>
+                        <div id="success-score">Final Score: <span id="success-score-value">0</span></div>
+                        <button id="success-restart-btn" class="btn">Play Again</button>
+                    </div>
+                </div>
+            </div>
+            
+            <div id="ability-bar">
+                <button class="ability-btn" data-ability="amber-strike">1<br>Amber Strike</button>
+                <button class="ability-btn" data-ability="struggle-control">2<br>Struggle for Control</button>
+                <button class="ability-btn" data-ability="consume-amber">3<br>Consume Amber</button>
+                <button class="ability-btn" data-ability="break-free">4<br>Break Free</button>
+            </div>
+        </div>
+        
+        <div id="phaser-game"></div>
+    </div>
+    
+    <script src="js/game.js"></script>
+    <script src="js/scenes/TitleScene.js"></script>
+    <script src="js/scenes/GameScene.js"></script>
+    <script src="js/entities/Player.js"></script>
+    <script src="js/entities/Enemy.js"></script>
+    <script src="js/entities/AmberGlobule.js"></script>
+    <script src="js/ui/UIManager.js"></script>
+    <script src="js/main.js"></script>
+</body>
+</html> 
