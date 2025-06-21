@@ -125,18 +125,13 @@ class Enemy {
     createSprite() {
         // Create sprite based on type
         if (this.type === 'boss') {
-            // Boss is a dark red circle
-            this.sprite = this.scene.add.circle(this.x, this.y, 30, 0x8B0000);
-            this.sprite.setStrokeStyle(3, 0x660000);
+            // Boss uses amberShaperUnSok image
+            this.sprite = this.scene.physics.add.sprite(this.x, this.y, 'amberShaperUnSok');
+            this.sprite.setScale(0.4); // Scale down the image to appropriate size
         } else if (this.type === 'amber-monstrosity') {
-            // Amber Monstrosity is a large orange/yellow gradient circle (2x boss size)
-            this.sprite = this.scene.add.circle(this.x, this.y, 60, 0xFF6600);
-            this.sprite.setStrokeStyle(6, 0xFFAA00);
-            
-            // Add gradient effect using a second circle
-            const gradientCircle = this.scene.add.circle(this.x, this.y, 50, 0xFFAA00);
-            gradientCircle.setAlpha(0.7);
-            this.gradientCircle = gradientCircle;
+            // Amber Monstrosity uses amberMonstrosity image
+            this.sprite = this.scene.physics.add.sprite(this.x, this.y, 'amberMonstrosity');
+            this.sprite.setScale(0.6); // Scale down the image to appropriate size
         } else if (this.type === 'wow-class' && this.wowClass) {
             // WoW class enemies are colored circles
             this.sprite = this.scene.add.circle(this.x, this.y, 12, this.wowClass.color);
@@ -419,7 +414,7 @@ class Enemy {
             
             // Debug logging for attack speeds
             if (this.wowClass) {
-                console.log(`${this.wowClass.name} attacking boss with ${this.attackSpeed}ms cooldown (${this.attackSpeed/1000}s)`);
+                //console.log(`${this.wowClass.name} attacking boss with ${this.attackSpeed}ms cooldown (${this.attackSpeed/1000}s)`);
             }
             
             // Deal damage to boss
@@ -427,15 +422,13 @@ class Enemy {
                 this.target.takeDamage(this.attackDamage);
             }
             
-            // Visual feedback
-            this.sprite.setFillStyle(0xff0000);
-            this.scene.time.delayedCall(200, () => {
-                if (this.wowClass) {
+            // Visual feedback - only for circle sprites (WoW class enemies)
+            if (this.type === 'wow-class' && this.wowClass) {
+                this.sprite.setFillStyle(0xff0000);
+                this.scene.time.delayedCall(200, () => {
                     this.sprite.setFillStyle(this.wowClass.color);
-                } else {
-                    this.sprite.setFillStyle(0xff0000);
-                }
-            });
+                });
+            }
         }
     }
     
@@ -454,15 +447,21 @@ class Enemy {
                 finalDamage *= (1 + debuff.value / 100);
             }
         });
-        
+        // Apply 99% damage reduction to boss if Amber Monstrosity is alive
+        if (this.type === 'boss' && this.scene.amberMonstrosity && this.scene.amberMonstrosity.health > 0) {
+            let reduced = finalDamage * 0.01;
+            finalDamage = Math.max(1, Math.round(reduced));
+        } else {
+            finalDamage = Math.round(finalDamage);
+        }
         this.health -= finalDamage;
-        
-        // Visual feedback
-        this.sprite.setFillStyle(0xff0000);
-        this.scene.time.delayedCall(200, () => {
-            this.updateHealthVisual();
-        });
-        
+        // Visual feedback - only for circle sprites (WoW class enemies)
+        if (this.type === 'wow-class' && this.wowClass) {
+            this.sprite.setFillStyle(0xff0000);
+            this.scene.time.delayedCall(200, () => {
+                this.sprite.setFillStyle(this.wowClass.color);
+            });
+        }
         if (this.health <= 0) {
             this.die();
         }
@@ -488,8 +487,10 @@ class Enemy {
         this.isBerserk = true;
         this.berserkTimer = 30; // 30 seconds berserk duration
         
-        // Visual change
-        this.sprite.setFillStyle(0xff0000);
+        // Visual change - only for circle sprites (WoW class enemies)
+        if (this.type === 'wow-class' && this.wowClass) {
+            this.sprite.setFillStyle(0xff0000);
+        }
         
         // Increase stats
         this.moveSpeed *= 1.5;
@@ -517,19 +518,8 @@ class Enemy {
     }
     
     updateHealthVisual() {
-        // Reset to original color based on type
-        if (this.type === 'boss') {
-            this.sprite.setFillStyle(0x8B0000); // Dark red for boss
-        } else if (this.type === 'amber-monstrosity') {
-            this.sprite.setFillStyle(0xFF6600); // Orange for Amber Monstrosity
-            if (this.gradientCircle) {
-                this.gradientCircle.setFillStyle(0xFFAA00); // Yellow gradient
-            }
-        } else if (this.type === 'wow-class' && this.wowClass) {
-            this.sprite.setFillStyle(this.wowClass.color); // WoW class color
-        } else {
-            this.sprite.setFillStyle(0xff0000); // Red for regular enemies
-        }
+        // For sprite images, we don't need to set fill styles
+        // The visual feedback is handled by the health bar below
         
         // Update health bar
         this.healthBar.clear();
@@ -538,11 +528,19 @@ class Enemy {
         const barHeight = this.type === 'amber-monstrosity' ? 8 : 4; // Taller bar for monstrosity
         const healthPercent = this.health / this.maxHealth;
         
+        // Get sprite dimensions for proper positioning
+        let spriteRadius = 15; // Default for circles
+        if (this.type === 'boss') {
+            spriteRadius = 30; // Approximate radius for boss image
+        } else if (this.type === 'amber-monstrosity') {
+            spriteRadius = 60; // Approximate radius for monstrosity image
+        }
+        
         // Background
         this.healthBar.fillStyle(0x333333);
         this.healthBar.fillRect(
             this.sprite.x - barWidth / 2,
-            this.sprite.y - this.sprite.radius - 10,
+            this.sprite.y - spriteRadius - 10,
             barWidth,
             barHeight
         );
@@ -551,7 +549,7 @@ class Enemy {
         this.healthBar.fillStyle(0x00ff00);
         this.healthBar.fillRect(
             this.sprite.x - barWidth / 2,
-            this.sprite.y - this.sprite.radius - 10,
+            this.sprite.y - spriteRadius - 10,
             barWidth * healthPercent,
             barHeight
         );
@@ -565,7 +563,8 @@ class Enemy {
         const barWidth = 30;
         const barHeight = 3;
         const x = this.sprite.x - barWidth / 2;
-        const y = this.sprite.y - 20;
+        // Position willpower bar above health bar
+        const y = this.sprite.y - 25; // Adjusted for new sprite positioning
         
         // Background
         this.willpowerBar.fillStyle(0x333333);
@@ -588,9 +587,7 @@ class Enemy {
         
         // Destroy sprite and effects
         this.sprite.destroy();
-        if (this.gradientCircle) {
-            this.gradientCircle.destroy();
-        }
+        // The gradient circle logic is removed as per the new createSprite method
         this.healthBar.destroy();
         if (this.willpowerBar) {
             this.willpowerBar.destroy();

@@ -25,6 +25,8 @@
                 
                 <button id="start-game">Start Training</button>
                 <button id="instructions-btn">Instructions</button>
+
+                <a id="github-btn" href="https://github.com/Krught/Amber-Shaper-Un-sok" target="_blank" rel="noopener noreferrer">Github</a>
             </div>
             
             <div id="instructions-screen" class="screen hidden">
@@ -49,6 +51,62 @@
                         <li>Amber Strike interrupts enemy spellcasting</li>
                         <li>Consume Amber strategically to restore Willpower</li>
                         <li>Break Free becomes available at 20% health</li>
+                    </ul>
+                    
+                    <h3>🏆 Scoring System</h3>
+                    <p><strong>Your score is calculated using a sophisticated system that rewards both skill and speed!</strong></p>
+                    
+                    <h4>Base Score Components:</h4>
+                    <ul>
+                        <li><strong>Time survived:</strong> 10 points per second</li>
+                        <li><strong>Damage dealt:</strong> 5 points per damage point</li>
+                    </ul>
+                    
+                    <h4>Stack-Based Points (Primary Scoring):</h4>
+                    <p>The main way to earn points is through managing stacks on the boss and Amber Monstrosity:</p>
+                    <ul>
+                        <li><strong>0→1 stacks:</strong> 100 points</li>
+                        <li><strong>1→2 stacks:</strong> 200 points</li>
+                        <li><strong>2→3 stacks:</strong> 400 points</li>
+                        <li><strong>3→4 stacks:</strong> 800 points</li>
+                        <li><strong>And so on</strong> (doubling each time)</li>
+                    </ul>
+                    
+                    <h4>Stack Penalties:</h4>
+                    <ul>
+                        <li><strong>Losing stacks:</strong> -50% of the points you would have gained for that stack</li>
+                        <li><strong>Stack timeout:</strong> Stacks reset after 15 seconds of inactivity</li>
+                    </ul>
+                    
+                    <h4>Time-Based Multiplier (Boss Kill Bonus):</h4>
+                    <p>When you defeat the boss, your total score is multiplied based on kill time. The multiplier decreases continuously, rewarding every second saved:</p>
+                    <ul>
+                        <li><strong>≤30 seconds:</strong> 4.0x - 5.5x multiplier (bonus for very fast kills)</li>
+                        <li><strong>30-60 seconds:</strong> 4.0x → 3.0x multiplier (smooth transition)</li>
+                        <li><strong>60-90 seconds:</strong> 3.0x → 2.0x multiplier (smooth transition)</li>
+                        <li><strong>90-120 seconds:</strong> 2.0x → 1.5x multiplier (smooth transition)</li>
+                        <li><strong>120-180 seconds:</strong> 1.5x → 1.2x multiplier (smooth transition)</li>
+                        <li><strong>180-240 seconds:</strong> 1.2x → 1.0x multiplier (smooth transition)</li>
+                        <li><strong>>240 seconds:</strong> 1.0x multiplier (no bonus)</li>
+                    </ul>
+                    
+                    <h4>Examples:</h4>
+                    <ul>
+                        <li>60 seconds = 3.0x multiplier</li>
+                        <li>62 seconds = 2.93x multiplier</li>
+                        <li>65 seconds = 2.83x multiplier</li>
+                        <li>90 seconds = 2.0x multiplier</li>
+                    </ul>
+                    
+                    <h4>Final Score Formula:</h4>
+                    <p><code>Final Score = (Base Score + Stack Points) × Time Multiplier</code></p>
+                    
+                    <h4>Scoring Strategy:</h4>
+                    <ul>
+                        <li><strong>Focus on maintaining high stacks</strong> - this is your primary source of points</li>
+                        <li><strong>Kill the boss quickly</strong> for maximum time multiplier</li>
+                        <li><strong>Avoid losing stacks</strong> - penalties are significant</li>
+                        <li><strong>Balance damage dealing with stack management</strong></li>
                     </ul>
                 </div>
                 <button id="back-to-title">Back to Title</button>

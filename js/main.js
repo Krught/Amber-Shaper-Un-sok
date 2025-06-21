@@ -233,6 +233,31 @@ class AmberShaperGame {
         setTimeout(() => {
             console.log('Starting fresh game...');
             this.startGame();
+            
+            // Reset player cooldowns after game starts
+            setTimeout(() => {
+                if (this.game && this.game.game && this.game.game.scene) {
+                    const gameScene = this.game.game.scene.getScene('GameScene');
+                    if (gameScene && gameScene.player) {
+                        console.log('Resetting player cooldowns...');
+                        // Reset all ability cooldowns to 0
+                        Object.keys(gameScene.player.cooldowns).forEach(ability => {
+                            gameScene.player.cooldowns[ability] = 0;
+                        });
+                        // Also reset Amber Explosion cooldown
+                        gameScene.player.amberExplosionCooldown = 0;
+                        console.log('Player cooldowns reset to 0');
+                        
+                        // Update the UI to reflect the reset cooldowns
+                        if (gameScene.uiManager) {
+                            gameScene.uiManager.update(gameScene.player);
+                            // Force clear all cooldown overlays to ensure they're completely hidden
+                            gameScene.uiManager.forceClearAllCooldowns();
+                            console.log('UI updated to show abilities as ready');
+                        }
+                    }
+                }
+            }, 200); // Wait a bit longer for the scene to fully initialize
         }, 100);
     }
     

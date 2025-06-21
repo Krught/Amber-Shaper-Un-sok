@@ -2,6 +2,66 @@ class GameScene extends Phaser.Scene {
     constructor() {
         super({ key: 'GameScene' });
         this.reset();
+        
+        // Define HP bar styles as variables
+        this.hpBarStyles = {
+            container: `
+                position: fixed;
+                width: 300px;
+                height: 20px;
+                background: #333;
+                border: 2px solid #666;
+                border-radius: 10px;
+                z-index: 1000;
+            `,
+            fill: `
+                height: 100%;
+                border-radius: 8px;
+                transition: width 0.3s ease;
+            `,
+            text: `
+                position: absolute;
+                top: 50%;
+                left: 50%;
+                transform: translate(-50%, -50%);
+                color: white;
+                font-weight: bold;
+                font-size: 10px;
+                text-shadow: 1px 1px 2px black;
+                text-wrap: nowrap;
+            `,
+            stacksContainer: `
+                position: fixed;
+                width: 150px;
+                height: 30px;
+                background: rgba(0, 0, 0, 0.7);
+                border-radius: 5px;
+                display: flex;
+                align-items: center;
+                justify-content: space-between;
+                padding: 0 10px;
+                z-index: 1000;
+            `,
+            stacksLabel: `
+                font-size: 10px;
+                font-weight: bold;
+            `,
+            stacksCounter: `
+                font-size: 12px;
+                font-weight: bold;
+            `,
+            stacksTimer: `
+                font-size: 10px;
+            `
+        };
+    }
+    
+    preload() {
+        // Load game images
+        this.load.image('mutatedConstruct', 'img/mutatedConstruct.png');
+        this.load.image('amberShaperUnSok', 'img/amberShaperUnSok.png');
+        this.load.image('amberMonstrosity', 'img/amberMonstrosity.png');
+        this.load.image('room', 'img/room.png');
     }
     
     reset() {
@@ -32,6 +92,13 @@ class GameScene extends Phaser.Scene {
         this.amberSpawnTimer = 0;
         this.amberSpawnInterval = 15000;
         this.amberSpawnCount = 0;
+        
+        // New scoring system variables
+        this.stackPoints = 0;
+        this.previousAmberShaperStacks = 0;
+        this.previousMonstrosityStacks = 0;
+        this.bossKillTime = 0;
+        this.timeMultiplier = 1.0;
         
         // Clear any existing event listeners
         this.clearEventListeners();
@@ -149,27 +216,31 @@ class GameScene extends Phaser.Scene {
     }
     
     createBackground() {
-        // Create a dark, atmospheric background
-        const graphics = this.add.graphics();
-        graphics.fillGradientStyle(0x0f0f1a, 0x0f0f1a, 0x1a1a2e, 0x1a1a2e, 1);
-        graphics.fillRect(0, 0, this.cameras.main.width, this.cameras.main.height);
+        // Create background using the room image
+        const background = this.add.image(0, 0, 'room');
+        background.setOrigin(0, 0);
         
-        // Add some ambient lighting
+        // Scale the image to fit the screen
+        const scaleX = this.cameras.main.width / background.width;
+        const scaleY = this.cameras.main.height / background.height;
+        const scale = Math.max(scaleX, scaleY); // Use the larger scale to ensure full coverage
+        background.setScale(scale);
+        
+        // Set the background to be behind everything else
+        background.setDepth(-1);
+        
+        // Add some ambient lighting overlay for atmosphere
         const ambientLight = this.add.graphics();
-        ambientLight.fillStyle(0xffffff, 0.05);
+        ambientLight.fillStyle(0x000000, 0.3); // Dark overlay for atmosphere
         ambientLight.fillRect(0, 0, this.cameras.main.width, this.cameras.main.height);
-        
-        // Add some ground texture
-        const ground = this.add.graphics();
-        ground.fillStyle(0x2a2a3a, 0.3);
-        ground.fillRect(0, this.cameras.main.height - 50, this.cameras.main.width, 50);
+        ambientLight.setDepth(-0.5); // Above background but below everything else
     }
     
     setupCollisions() {
-        // Player collision with enemies
+        // Player collision with enemies (excluding WoW class enemies which are friendly)
         this.physics.add.overlap(this.player.sprite, this.enemies.map(e => e.sprite), (player, enemy) => {
             const enemyObj = this.enemies.find(e => e.sprite === enemy);
-            if (enemyObj && enemyObj.isAttacking) {
+            if (enemyObj && enemyObj.isAttacking && enemyObj.type !== 'wow-class') {
                 this.player.takeDamage(10);
             }
         });
@@ -300,11 +371,18 @@ class GameScene extends Phaser.Scene {
         // Update Monstrosity stacks
         this.updateMonstrosityStacks();
         
+        // Update stack timer displays every frame for smooth countdown
+        this.updateStacksDisplay();
+        this.updateMonstrosityStacksDisplay();
+        
         // Update amber spawning
         this.updateAmberSpawning(delta);
         
         // Update boss HP bar
         this.updateBossHPBar();
+        
+        // Update boss movement
+        this.updateBossMovement(delta);
         
         // Update Amber Monstrosity HP bar
         this.updateMonstrosityHPBar();
@@ -316,12 +394,12 @@ class GameScene extends Phaser.Scene {
         
         // Update score
         if (window.amberShaperGame) {
-            const currentScore = Math.floor(this.gameTime * 10) + (this.player.damageDealt * 5);
-            window.amberShaperGame.updateScore(currentScore);
+            this.updateScoreDisplay(); // Use new scoring system
         }
         
         // Update target indicator
         this.updateTargetIndicator();
+        this.updateTargetIndicators();
         
         // Phase management
         this.updatePhase(delta);
@@ -437,6 +515,8 @@ class GameScene extends Phaser.Scene {
         // Check if boss is defeated
         if (this.boss && this.boss.health <= 0) {
             console.log('Boss defeated! Health:', this.boss.health, 'Max health:', this.boss.maxHealth);
+            this.bossKillTime = this.gameTime; // Record kill time for scoring
+            console.log(`Boss killed in ${this.bossKillTime.toFixed(1)} seconds`);
             this.endGame('Victory! You defeated Amber-Shaper Un\'sok!');
             return;
         }
@@ -452,8 +532,8 @@ class GameScene extends Phaser.Scene {
     endGame(reason) {
         this.gameOver = true;
         
-        // Calculate final score
-        this.score = Math.floor(this.gameTime * 10) + (this.player.damageDealt * 5);
+        // Calculate final score using new system
+        this.score = this.calculateFinalScore();
         
         // Update UI
         if (window.amberShaperGame) {
@@ -464,7 +544,7 @@ class GameScene extends Phaser.Scene {
             this.showFallbackGameOver(reason);
         }
         
-        console.log('Game ended:', reason);
+        console.log('Game ended:', reason, 'Final score:', this.score);
     }
     
     showFallbackGameOver(reason) {
@@ -508,8 +588,8 @@ class GameScene extends Phaser.Scene {
     endGameSuccess(reason) {
         this.gameOver = true;
         
-        // Calculate final score
-        this.score = Math.floor(this.gameTime * 10) + (this.player.damageDealt * 5);
+        // Calculate final score using new system
+        this.score = this.calculateFinalScore();
         
         // Update UI
         if (window.amberShaperGame) {
@@ -520,46 +600,7 @@ class GameScene extends Phaser.Scene {
             this.showFallbackSuccess(reason);
         }
         
-        console.log('Game ended successfully:', reason);
-    }
-    
-    showFallbackSuccess(reason) {
-        // Create fallback success screen
-        const successScreen = document.createElement('div');
-        successScreen.id = 'fallback-success';
-        successScreen.style.cssText = `
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            background: rgba(0, 0, 0, 0.9);
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            z-index: 9999;
-            color: white;
-            font-family: Arial, sans-serif;
-        `;
-        
-        successScreen.innerHTML = `
-            <div style="text-align: center; padding: 40px;">
-                <h1 style="color: #4CAF50; margin-bottom: 20px;">Success!</h1>
-                <p style="font-size: 18px; margin-bottom: 30px;">${reason}</p>
-                <p style="font-size: 16px; margin-bottom: 30px;">Final Score: ${this.score}</p>
-                <button onclick="location.reload()" style="
-                    padding: 15px 30px;
-                    font-size: 16px;
-                    background: #4CAF50;
-                    color: white;
-                    border: none;
-                    border-radius: 5px;
-                    cursor: pointer;
-                ">Play Again</button>
-            </div>
-        `;
-        
-        document.body.appendChild(successScreen);
+        console.log('Game ended successfully:', reason, 'Final score:', this.score);
     }
     
     removeEnemy(enemy) {
@@ -616,10 +657,7 @@ class GameScene extends Phaser.Scene {
         switch(ability) {
             case 'amber-strike':
                 this.player.useAmberStrike();
-                // Check if target is boss and add stack (only if ability was actually used)
-                if (this.player.target === this.boss && this.player.lastAbilityUsed === 'amber-strike') {
-                    this.addAmberShaperStack();
-                }
+                // Note: Stack management is now handled in Player.useAmberStrike() based on target type
                 break;
             case 'struggle-control':
                 this.player.useStruggleForControl();
@@ -636,20 +674,59 @@ class GameScene extends Phaser.Scene {
     handleClickTargeting(x, y) {
         console.log(`Click at: ${x}, ${y}`);
         
-        // Only allow targeting the boss
+        // Check if we can target the boss (Amber-Shaper)
+        let bossDistance = Infinity;
         if (this.boss && this.boss.sprite) {
-            const bossDistance = Phaser.Math.Distance.Between(x, y, this.boss.sprite.x, this.boss.sprite.y);
+            bossDistance = Phaser.Math.Distance.Between(x, y, this.boss.sprite.x, this.boss.sprite.y);
             console.log(`Boss distance: ${bossDistance}, Boss position: ${this.boss.sprite.x}, ${this.boss.sprite.y}`);
-            if (bossDistance <= 35) { // Slightly larger radius for easier targeting
-                this.player.target = this.boss;
-                console.log('Targeted boss successfully');
-                return;
-            }
         }
         
-        // If clicked on nothing or on WoW class enemies (friendlies), clear target
-        this.player.target = null;
-        console.log('Cleared target - clicked on empty space or friendly');
+        // Check if we can target the Amber Monstrosity
+        let monstrosityDistance = Infinity;
+        if (this.amberMonstrosity && this.amberMonstrosity.sprite) {
+            monstrosityDistance = Phaser.Math.Distance.Between(x, y, this.amberMonstrosity.sprite.x, this.amberMonstrosity.sprite.y);
+            console.log(`Monstrosity distance: ${monstrosityDistance}, Monstrosity position: ${this.amberMonstrosity.sprite.x}, ${this.amberMonstrosity.sprite.y}`);
+        }
+        
+        // Target the closest enemy within range, with priority to boss
+        const bossTargetingRange = 60; // Larger hitbox for boss since model is bigger
+        const monstrosityTargetingRange = 35; // Standard hitbox for monstrosity
+        
+        if (bossDistance <= bossTargetingRange) {
+            this.player.target = this.boss;
+            console.log('Targeted Amber-Shaper boss successfully');
+        } else if (monstrosityDistance <= monstrosityTargetingRange) {
+            this.player.target = this.amberMonstrosity;
+            console.log('Targeted Amber Monstrosity successfully');
+        } else {
+            // If clicked on nothing or on WoW class enemies (friendlies), clear target
+            this.player.target = null;
+            console.log('Cleared target - clicked on empty space or friendly');
+        }
+        
+        // Update target indicators (skull icons)
+        this.updateTargetIndicators();
+    }
+    
+    updateTargetIndicators() {
+        // Update skull icons based on current target
+        const amberShaperSkull = document.querySelector('.amber-shaper-skull');
+        const monstrositySkull = document.querySelector('.monstrosity-skull');
+        
+        // Hide all skulls first
+        if (amberShaperSkull) amberShaperSkull.style.display = 'none';
+        if (monstrositySkull) monstrositySkull.style.display = 'none';
+        
+        // Show skull for current target
+        if (this.player && this.player.target) {
+            if (this.player.target === this.boss && amberShaperSkull) {
+                amberShaperSkull.style.display = 'block';
+                console.log('Showing skull for Amber-Shaper');
+            } else if (this.player.target === this.amberMonstrosity && monstrositySkull) {
+                monstrositySkull.style.display = 'block';
+                console.log('Showing skull for Amber Monstrosity');
+            }
+        }
     }
     
     updateTargetIndicator() {
@@ -678,6 +755,7 @@ class GameScene extends Phaser.Scene {
             this.amberShaperStacks = 0;
             this.showStacksResetMessage();
             this.updateStacksDisplay();
+            this.updateStackScoring(); // Update scoring when stacks reset
         }
     }
     
@@ -689,6 +767,7 @@ class GameScene extends Phaser.Scene {
             this.monstrosityStacks = 0;
             this.showMonstrosityStacksResetMessage();
             this.updateMonstrosityStacksDisplay();
+            this.updateStackScoring(); // Update scoring when stacks reset
         }
     }
     
@@ -714,6 +793,7 @@ class GameScene extends Phaser.Scene {
         this.amberShaperStacks++;
         this.lastStackTime = this.time.now;
         this.updateStacksDisplay();
+        this.updateStackScoring(); // Update scoring when stacks change
         console.log(`Amber-Shaper stacks: ${this.amberShaperStacks}`);
     }
     
@@ -721,6 +801,7 @@ class GameScene extends Phaser.Scene {
         this.monstrosityStacks++;
         this.lastMonstrosityStackTime = this.time.now;
         this.updateMonstrosityStacksDisplay();
+        this.updateStackScoring(); // Update scoring when stacks change
         console.log(`Monstrosity stacks: ${this.monstrosityStacks}`);
     }
     
@@ -768,6 +849,230 @@ class GameScene extends Phaser.Scene {
                 message.parentNode.removeChild(message);
             }
         }, 3000);
+    }
+
+    // New scoring system functions
+    calculateTimeMultiplier(killTimeInSeconds) {
+        // Dynamic time-based multiplier: faster kills = higher multiplier
+        // Uses a continuous function instead of discrete minute marks
+        // 30 seconds = 4.0x multiplier
+        // 60 seconds = 3.0x multiplier
+        // 90 seconds = 2.0x multiplier
+        // 120 seconds = 1.5x multiplier
+        // 180 seconds = 1.2x multiplier
+        // 240+ seconds = 1.0x multiplier
+        
+        // Use a logarithmic decay function for smooth transitions
+        // Formula: multiplier = 4.0 - (log(killTimeInSeconds + 1) * 0.8)
+        // This creates a smooth curve that rewards every second saved
+        
+        if (killTimeInSeconds <= 30) {
+            // Bonus for very fast kills (under 30 seconds)
+            return 4.0 + (30 - killTimeInSeconds) * 0.05; // Up to 5.5x for instant kills
+        } else if (killTimeInSeconds <= 60) {
+            // Smooth transition from 4.0x to 3.0x
+            const progress = (killTimeInSeconds - 30) / 30; // 0 to 1
+            return 4.0 - (progress * 1.0); // Linear from 4.0 to 3.0
+        } else if (killTimeInSeconds <= 90) {
+            // Smooth transition from 3.0x to 2.0x
+            const progress = (killTimeInSeconds - 60) / 30; // 0 to 1
+            return 3.0 - (progress * 1.0); // Linear from 3.0 to 2.0
+        } else if (killTimeInSeconds <= 120) {
+            // Smooth transition from 2.0x to 1.5x
+            const progress = (killTimeInSeconds - 90) / 30; // 0 to 1
+            return 2.0 - (progress * 0.5); // Linear from 2.0 to 1.5
+        } else if (killTimeInSeconds <= 180) {
+            // Smooth transition from 1.5x to 1.2x
+            const progress = (killTimeInSeconds - 120) / 60; // 0 to 1
+            return 1.5 - (progress * 0.3); // Linear from 1.5 to 1.2
+        } else if (killTimeInSeconds <= 240) {
+            // Smooth transition from 1.2x to 1.0x
+            const progress = (killTimeInSeconds - 180) / 60; // 0 to 1
+            return 1.2 - (progress * 0.2); // Linear from 1.2 to 1.0
+        } else {
+            // 1.0x for kills over 4 minutes
+            return 1.0;
+        }
+    }
+    
+    calculateStackPoints(newStacks, previousStacks, stackType) {
+        // Stack-based point calculation: higher stacks = exponentially more points
+        // Going from 0->1 = 100 points
+        // Going from 1->2 = 200 points  
+        // Going from 2->3 = 400 points
+        // Going from 3->4 = 800 points
+        // And so on (doubling each time)
+        
+        if (newStacks > previousStacks) {
+            // Gaining stacks - calculate points for each new stack
+            let points = 0;
+            for (let i = previousStacks + 1; i <= newStacks; i++) {
+                points += 100 * Math.pow(2, i - 1); // Exponential growth
+            }
+            console.log(`${stackType} stacks gained: ${previousStacks}->${newStacks}, points: +${points}`);
+            return points;
+        } else if (newStacks < previousStacks) {
+            // Losing stacks - calculate penalty for each lost stack
+            let penalty = 0;
+            for (let i = previousStacks; i > newStacks; i--) {
+                penalty += 50 * Math.pow(2, i - 1); // Half the points for losing stacks
+            }
+            console.log(`${stackType} stacks lost: ${previousStacks}->${newStacks}, penalty: -${penalty}`);
+            return -penalty;
+        }
+        return 0; // No change
+    }
+    
+    updateStackScoring() {
+        // Calculate points for Amber-Shaper stacks
+        const amberShaperPoints = this.calculateStackPoints(
+            this.amberShaperStacks, 
+            this.previousAmberShaperStacks, 
+            'Amber-Shaper'
+        );
+        
+        // Calculate points for Monstrosity stacks
+        const monstrosityPoints = this.calculateStackPoints(
+            this.monstrosityStacks, 
+            this.previousMonstrosityStacks, 
+            'Monstrosity'
+        );
+        
+        // Update total stack points
+        this.stackPoints += amberShaperPoints + monstrosityPoints;
+        
+        // Update previous stack counts
+        this.previousAmberShaperStacks = this.amberShaperStacks;
+        this.previousMonstrosityStacks = this.monstrosityStacks;
+        
+        // Update score display if points changed
+        if (amberShaperPoints !== 0 || monstrosityPoints !== 0) {
+            this.updateScoreDisplay();
+        }
+    }
+    
+    showPointNotification(points, stackType) {
+        const notification = document.createElement('div');
+        const isPositive = points > 0;
+        const sign = isPositive ? '+' : '';
+        const color = isPositive ? '#4caf50' : '#ff4444';
+        
+        notification.style.cssText = `
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: rgba(0, 0, 0, 0.9);
+            color: ${color};
+            font-size: 24px;
+            font-weight: bold;
+            padding: 15px 25px;
+            border: 2px solid ${color};
+            border-radius: 10px;
+            z-index: 10000;
+            text-align: center;
+            animation: pointNotification 2s ease-out forwards;
+        `;
+        
+        notification.textContent = `${stackType} Stacks: ${sign}${points} points`;
+        
+        // Add CSS animation
+        const style = document.createElement('style');
+        style.textContent = `
+            @keyframes pointNotification {
+                0% { opacity: 0; transform: translate(-50%, -50%) scale(0.5); }
+                20% { opacity: 1; transform: translate(-50%, -50%) scale(1.1); }
+                80% { opacity: 1; transform: translate(-50%, -50%) scale(1); }
+                100% { opacity: 0; transform: translate(-50%, -50%) scale(0.8); }
+            }
+        `;
+        document.head.appendChild(style);
+        
+        document.body.appendChild(notification);
+        
+        // Remove notification after animation
+        setTimeout(() => {
+            if (notification.parentNode) {
+                notification.parentNode.removeChild(notification);
+            }
+        }, 2000);
+    }
+    
+    updateScoreDisplay() {
+        // Calculate current total score
+        const baseScore = Math.floor(this.gameTime * 10) + (this.player.damageDealt * 5);
+        const totalScore = baseScore + this.stackPoints;
+        
+        // Update UI
+        if (window.amberShaperGame) {
+            window.amberShaperGame.updateScore(totalScore);
+        }
+        
+        // Remove scoring info display if it exists (hide in-game)
+        const scoringInfo = document.getElementById('scoring-info');
+        if (scoringInfo) {
+            scoringInfo.remove();
+        }
+        
+        // Debug logging
+        if (this.gameTime % 5 < 0.1) { // Log every 5 seconds
+            console.log(`Score breakdown: Base(${baseScore}) + Stacks(${this.stackPoints}) = Total(${totalScore})`);
+        }
+    }
+    
+    updateScoringInfoDisplay(baseScore, totalScore) {
+        // Find or create scoring info display
+        let scoringInfo = document.getElementById('scoring-info');
+        if (!scoringInfo) {
+            scoringInfo = document.createElement('div');
+            scoringInfo.id = 'scoring-info';
+            scoringInfo.style.cssText = `
+                position: fixed;
+                top: 20px;
+                right: 20px;
+                background: rgba(0, 0, 0, 0.8);
+                padding: 10px;
+                border-radius: 5px;
+                border: 1px solid #4caf50;
+                color: white;
+                font-family: Arial, sans-serif;
+                font-size: 12px;
+                z-index: 1000;
+                min-width: 150px;
+            `;
+            document.body.appendChild(scoringInfo);
+        }
+        
+        // Calculate time multiplier if boss was killed
+        let timeMultiplierText = 'N/A';
+        if (this.bossKillTime > 0) {
+            const multiplier = this.calculateTimeMultiplier(this.bossKillTime);
+            timeMultiplierText = `${multiplier.toFixed(1)}x`;
+        }
+        
+        // Update content
+        scoringInfo.innerHTML = `
+            <div style="margin-bottom: 5px; font-weight: bold; color: #4caf50;">Scoring Info</div>
+            <div style="margin-bottom: 3px;">Base Score: ${baseScore}</div>
+            <div style="margin-bottom: 3px;">Stack Points: ${this.stackPoints}</div>
+            <div style="margin-bottom: 3px;">Time Multiplier: ${timeMultiplierText}</div>
+            <div style="margin-bottom: 3px; font-weight: bold;">Total: ${totalScore}</div>
+        `;
+    }
+    
+    calculateFinalScore() {
+        // Calculate base score
+        const baseScore = Math.floor(this.gameTime * 10) + (this.player.damageDealt * 5);
+        
+        // Apply time multiplier if boss was killed
+        let finalScore = baseScore + this.stackPoints;
+        if (this.bossKillTime > 0) {
+            this.timeMultiplier = this.calculateTimeMultiplier(this.bossKillTime);
+            finalScore = Math.floor(finalScore * this.timeMultiplier);
+            console.log(`Final score calculation: ${baseScore + this.stackPoints} * ${this.timeMultiplier}x = ${finalScore}`);
+        }
+        
+        return finalScore;
     }
 
     createWoWClassEnemies() {
@@ -920,7 +1225,7 @@ class GameScene extends Phaser.Scene {
                 }
                 
                 // Show damage reduction when Amber Monstrosity is alive
-                const damageReductionText = this.amberMonstrosity && this.amberMonstrosity.health > 0 ? ' (99% Damage Reduction)' : '';
+                const damageReductionText = this.amberMonstrosity && this.amberMonstrosity.health > 0 ? ' (99% DR)' : '';
                 const newText = `Amber-Shaper Un'sok: ${Math.floor(this.boss.health)}/${Math.floor(this.boss.maxHealth)}${damageReductionText}`;
                 bossHPText.textContent = newText;
                 
@@ -955,6 +1260,47 @@ class GameScene extends Phaser.Scene {
                     });
                 }
             }
+        }
+    }
+    
+    updateBossMovement(delta) {
+        if (this.boss && this.boss.isMoving && this.boss.moveTarget) {
+            const currentX = this.boss.sprite.x;
+            const currentY = this.boss.sprite.y;
+            const targetX = this.boss.moveTarget.x;
+            const targetY = this.boss.moveTarget.y;
+            
+            // Calculate distance to target
+            const distance = Phaser.Math.Distance.Between(currentX, currentY, targetX, targetY);
+            
+            // If we're close enough to the target, stop moving
+            if (distance < 5) {
+                this.boss.isMoving = false;
+                this.boss.moveTarget = null;
+                console.log('Boss has reached target position');
+                return;
+            }
+            
+            // Calculate direction vector
+            const directionX = targetX - currentX;
+            const directionY = targetY - currentY;
+            
+            // Normalize the direction vector
+            const length = Math.sqrt(directionX * directionX + directionY * directionY);
+            const normalizedX = directionX / length;
+            const normalizedY = directionY / length;
+            
+            // Calculate movement for this frame (convert delta to seconds)
+            const deltaSeconds = delta / 1000;
+            const moveDistance = this.boss.moveSpeed * deltaSeconds;
+            
+            // Calculate new position
+            const newX = currentX + (normalizedX * moveDistance);
+            const newY = currentY + (normalizedY * moveDistance);
+            
+            // Update boss position
+            this.boss.sprite.x = newX;
+            this.boss.sprite.y = newY;
         }
     }
     
@@ -1025,12 +1371,34 @@ class GameScene extends Phaser.Scene {
     }
     
     spawnAmberMonstrosity() {
-        // Create Amber Monstrosity at a random position near the boss
-        const x = this.cameras.main.width / 2 + Phaser.Math.Between(-100, 100);
-        const y = this.cameras.main.height / 2 + Phaser.Math.Between(-100, 100);
+        // Create Amber Monstrosity in the left 1/3 of the room, between top 1/4 and middle vertically
+        const leftThird = this.cameras.main.width / 3;
+        const topQuarter = this.cameras.main.height / 4;
+        const middle = this.cameras.main.height / 2;
+        
+        const x = Phaser.Math.Between(50, leftThird - 50); // Left 1/3 with some margin from edges
+        const y = Phaser.Math.Between(topQuarter + 50, middle - 50); // Between top 1/4 and middle with margins
         
         this.amberMonstrosity = new Enemy(this, x, y, 'amber-monstrosity');
         console.log('Amber Monstrosity spawned with health:', this.amberMonstrosity.health, '/', this.amberMonstrosity.maxHealth);
+        console.log('Amber Monstrosity spawned at position:', x, y);
+        
+        // Calculate boss target position (50px away from Amber Monstrosity)
+        const distance = 50;
+        const angle = Phaser.Math.Between(0, 360) * (Math.PI / 180); // Random angle around the monstrosity
+        const bossTargetX = x + Math.cos(angle) * distance;
+        const bossTargetY = y + Math.sin(angle) * distance;
+        
+        // Ensure boss target position is within screen bounds
+        const clampedX = Phaser.Math.Clamp(bossTargetX, 50, this.cameras.main.width - 50);
+        const clampedY = Phaser.Math.Clamp(bossTargetY, 50, this.cameras.main.height - 50);
+        
+        console.log('Boss moving to position:', clampedX, clampedY, 'to be near Amber Monstrosity');
+        
+        // Set boss movement target (95% of player speed = 190 pixels/second)
+        this.boss.moveTarget = { x: clampedX, y: clampedY };
+        this.boss.moveSpeed = 190; // 95% of player's 200 speed
+        this.boss.isMoving = true;
         
         // Make all 24 WoW class enemies target the Amber Monstrosity
         this.enemies.forEach(enemy => {
@@ -1049,89 +1417,85 @@ class GameScene extends Phaser.Scene {
         const monstrosityHPBar = document.createElement('div');
         monstrosityHPBar.className = 'monstrosity-hp-bar';
         monstrosityHPBar.style.cssText = `
-            position: fixed;
+            ${this.hpBarStyles.container}
             top: 120px;
-            left: 50%;
-            transform: translateX(-50%);
-            width: 300px;
-            height: 20px;
-            background: #333;
-            border: 2px solid #666;
-            border-radius: 10px;
-            z-index: 1000;
+            cursor: pointer;
         `;
         
         const monstrosityHPFill = document.createElement('div');
         monstrosityHPFill.className = 'monstrosity-hp-fill';
         monstrosityHPFill.style.cssText = `
+            ${this.hpBarStyles.fill}
             width: 100%;
-            height: 100%;
             background: linear-gradient(to right, #ff6600, #ffaa00);
-            border-radius: 8px;
-            transition: width 0.3s ease;
         `;
         
         const monstrosityHPText = document.createElement('div');
         monstrosityHPText.className = 'monstrosity-hp-text';
-        monstrosityHPText.style.cssText = `
-            position: absolute;
-            top: 50%;
-            left: 50%;
-            transform: translate(-50%, -50%);
-            color: white;
-            font-weight: bold;
-            font-size: 12px;
-            text-shadow: 1px 1px 2px black;
-        `;
+        monstrosityHPText.style.cssText = this.hpBarStyles.text;
         monstrosityHPText.textContent = 'Amber Monstrosity: 10000/10000';
+        
+        // Create skull icon (initially hidden)
+        const monstrositySkull = document.createElement('div');
+        monstrositySkull.className = 'monstrosity-skull';
+        monstrositySkull.innerHTML = '💀';
+        monstrositySkull.style.cssText = `
+            position: absolute;
+            right: -25px;
+            top: 50%;
+            transform: translateY(-50%);
+            font-size: 16px;
+            color: #ff6600;
+            display: none;
+            z-index: 1001;
+        `;
         
         monstrosityHPBar.appendChild(monstrosityHPFill);
         monstrosityHPBar.appendChild(monstrosityHPText);
+        monstrosityHPBar.appendChild(monstrositySkull);
         document.body.appendChild(monstrosityHPBar);
+        
+        // Add click event listener for targeting
+        monstrosityHPBar.addEventListener('click', () => {
+            this.player.target = this.amberMonstrosity;
+            this.updateTargetIndicators();
+            console.log('Targeted Amber Monstrosity via HP bar click');
+        });
         
         // Create stacks counter for Amber Monstrosity (1/2 size of original)
         const monstrosityStacksContainer = document.createElement('div');
         monstrosityStacksContainer.className = 'monstrosity-stacks-container';
         monstrosityStacksContainer.style.cssText = `
-            position: fixed;
-            top: 150px;
-            left: 50%;
-            transform: translateX(-50%);
-            width: 150px;
-            height: 30px;
-            background: rgba(0, 0, 0, 0.7);
+            ${this.hpBarStyles.stacksContainer}
+            // top: 150px;
+            top: 15%;
+            left: 17%;
+            // left: 50%;
+            // transform: translateX(-50%);
             border: 2px solid #ff6600;
-            border-radius: 5px;
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            padding: 0 10px;
-            z-index: 1000;
         `;
         
         const monstrosityStacksLabel = document.createElement('div');
         monstrosityStacksLabel.textContent = 'Monstrosity Stacks:';
         monstrosityStacksLabel.style.cssText = `
+            ${this.hpBarStyles.stacksLabel}
             color: #ff6600;
-            font-size: 10px;
-            font-weight: bold;
         `;
         
         const monstrosityStacksCounter = document.createElement('div');
         monstrosityStacksCounter.id = 'monstrosity-stacks-counter';
         monstrosityStacksCounter.textContent = '0';
         monstrosityStacksCounter.style.cssText = `
+            ${this.hpBarStyles.stacksCounter}
             color: #ffaa00;
-            font-size: 12px;
-            font-weight: bold;
         `;
         
         const monstrosityStacksTimer = document.createElement('div');
         monstrosityStacksTimer.id = 'monstrosity-stacks-timer';
         monstrosityStacksTimer.textContent = '15s';
         monstrosityStacksTimer.style.cssText = `
+            ${this.hpBarStyles.stacksTimer}
             color: #ffaa00;
-            font-size: 10px;
         `;
         
         monstrosityStacksContainer.appendChild(monstrosityStacksLabel);
@@ -1148,47 +1512,54 @@ class GameScene extends Phaser.Scene {
         const amberShaperHPBar = document.createElement('div');
         amberShaperHPBar.className = 'amber-shaper-hp-bar';
         amberShaperHPBar.style.cssText = `
-            position: fixed;
+            ${this.hpBarStyles.container}
             top: 80px;
-            left: 50%;
-            transform: translateX(-50%);
-            width: 300px;
-            height: 20px;
-            background: #333;
-            border: 2px solid #666;
-            border-radius: 10px;
-            z-index: 1000;
+            left: 0%;
+            cursor: pointer;
         `;
         
         const amberShaperHPFill = document.createElement('div');
         amberShaperHPFill.className = 'amber-shaper-hp-fill';
         const initialHealthPercent = (this.boss.health / this.boss.maxHealth) * 100;
         amberShaperHPFill.style.cssText = `
+            ${this.hpBarStyles.fill}
             width: ${initialHealthPercent}%;
-            height: 100%;
             background: linear-gradient(to right, #ff0000, #ff6666);
-            border-radius: 8px;
         `;
         
         console.log(`Initial HP bar width set to: ${initialHealthPercent}%`);
         
         const amberShaperHPText = document.createElement('div');
         amberShaperHPText.className = 'amber-shaper-hp-text';
-        amberShaperHPText.style.cssText = `
-            position: absolute;
-            top: 50%;
-            left: 50%;
-            transform: translate(-50%, -50%);
-            color: white;
-            font-weight: bold;
-            font-size: 12px;
-            text-shadow: 1px 1px 2px black;
-        `;
+        amberShaperHPText.style.cssText = this.hpBarStyles.text;
         amberShaperHPText.textContent = `Amber-Shaper Un'sok: ${Math.floor(this.boss.health)}/${Math.floor(this.boss.maxHealth)}`;
+        
+        // Create skull icon (initially hidden)
+        const amberShaperSkull = document.createElement('div');
+        amberShaperSkull.className = 'amber-shaper-skull';
+        amberShaperSkull.innerHTML = '💀';
+        amberShaperSkull.style.cssText = `
+            position: absolute;
+            right: -25px;
+            top: 50%;
+            transform: translateY(-50%);
+            font-size: 16px;
+            color: #ff0000;
+            display: none;
+            z-index: 1001;
+        `;
         
         amberShaperHPBar.appendChild(amberShaperHPFill);
         amberShaperHPBar.appendChild(amberShaperHPText);
+        amberShaperHPBar.appendChild(amberShaperSkull);
         document.body.appendChild(amberShaperHPBar);
+        
+        // Add click event listener for targeting
+        amberShaperHPBar.addEventListener('click', () => {
+            this.player.target = this.boss;
+            this.updateTargetIndicators();
+            console.log('Targeted Amber-Shaper via HP bar click');
+        });
         
         console.log('Amber-Shaper HP bar created and added to DOM');
         
@@ -1196,45 +1567,33 @@ class GameScene extends Phaser.Scene {
         const amberShaperStacksContainer = document.createElement('div');
         amberShaperStacksContainer.className = 'amber-shaper-stacks-container';
         amberShaperStacksContainer.style.cssText = `
-            position: fixed;
-            top: 110px;
-            left: 50%;
-            transform: translateX(-50%);
-            width: 150px;
-            height: 30px;
-            background: rgba(0, 0, 0, 0.7);
+            ${this.hpBarStyles.stacksContainer}
+            top: 8%;
+            left: 17%;
             border: 2px solid #ffd700;
-            border-radius: 5px;
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            padding: 0 10px;
-            z-index: 1000;
         `;
         
         const amberShaperStacksLabel = document.createElement('div');
         amberShaperStacksLabel.textContent = 'Amber-Shaper Stacks:';
         amberShaperStacksLabel.style.cssText = `
+            ${this.hpBarStyles.stacksLabel}
             color: #ffd700;
-            font-size: 10px;
-            font-weight: bold;
         `;
         
         const amberShaperStacksCounter = document.createElement('div');
         amberShaperStacksCounter.id = 'amber-shaper-stacks-counter';
         amberShaperStacksCounter.textContent = '0';
         amberShaperStacksCounter.style.cssText = `
+            ${this.hpBarStyles.stacksCounter}
             color: #ffd700;
-            font-size: 12px;
-            font-weight: bold;
         `;
         
         const amberShaperStacksTimer = document.createElement('div');
         amberShaperStacksTimer.id = 'amber-shaper-stacks-timer';
         amberShaperStacksTimer.textContent = '15s';
         amberShaperStacksTimer.style.cssText = `
+            ${this.hpBarStyles.stacksTimer}
             color: #ffd700;
-            font-size: 10px;
         `;
         
         amberShaperStacksContainer.appendChild(amberShaperStacksLabel);
@@ -1263,7 +1622,8 @@ class GameScene extends Phaser.Scene {
             '.stacks-reset-message',
             '.monstrosity-stacks-reset-message',
             '.fallback-game-over',
-            '.fallback-success'
+            '.fallback-success',
+            '#scoring-info'
         ];
         
         elementsToRemove.forEach(selector => {

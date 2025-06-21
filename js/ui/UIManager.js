@@ -84,7 +84,21 @@ class UIManager {
                 // Hide cooldown
                 button.classList.remove('cooldown');
                 overlay.style.display = 'none';
+                overlay.style.visibility = 'hidden';
                 cooldownFill.style.height = '0%';
+                
+                // Clear cooldown text to prevent persistence
+                const cooldownTextElement = overlay.querySelector('.cooldown-text');
+                if (cooldownTextElement) {
+                    cooldownTextElement.textContent = '';
+                    cooldownTextElement.style.display = 'none';
+                }
+                
+                // Force remove any remaining cooldown visual elements
+                const allCooldownElements = overlay.querySelectorAll('*');
+                allCooldownElements.forEach(element => {
+                    element.style.display = 'none';
+                });
             }
             
             // Check if ability can be used
@@ -435,5 +449,46 @@ class UIManager {
         });
         
         console.log('UIManager cleanup complete');
+    }
+    
+    forceClearAllCooldowns() {
+        console.log('Force clearing all cooldown overlays...');
+        
+        Object.keys(this.abilityButtons).forEach(ability => {
+            const button = this.abilityButtons[ability];
+            const overlay = this.cooldownOverlays[ability];
+            
+            // Remove cooldown class
+            button.classList.remove('cooldown');
+            
+            // Hide overlay completely
+            overlay.style.display = 'none';
+            overlay.style.visibility = 'hidden';
+            
+            // Clear cooldown fill
+            const cooldownFill = button.querySelector('.cooldown-fill');
+            if (cooldownFill) {
+                cooldownFill.style.height = '0%';
+            }
+            
+            // Clear all cooldown text elements
+            const cooldownTextElements = overlay.querySelectorAll('.cooldown-text');
+            cooldownTextElements.forEach(element => {
+                element.textContent = '';
+                element.style.display = 'none';
+            });
+            
+            // Hide all elements within overlay
+            const allOverlayElements = overlay.querySelectorAll('*');
+            allOverlayElements.forEach(element => {
+                element.style.display = 'none';
+            });
+            
+            // Set button to ready state
+            button.style.borderColor = '#4caf50';
+            button.style.opacity = '1';
+        });
+        
+        console.log('All cooldown overlays cleared');
     }
 } 

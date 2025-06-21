@@ -103,10 +103,53 @@ You play as a Mutated Construct, a transformed player character with unique abil
 
 ## 🏆 Scoring System
 
-Your score is calculated based on:
-- Time survived (10 points per second)
-- Damage dealt (5 points per damage point)
-- Bonus points for efficient willpower management
+Your score is calculated using a sophisticated system that rewards both speed and skill:
+
+### Base Score Components
+- **Time survived**: 10 points per second
+- **Damage dealt**: 5 points per damage point
+
+### Stack-Based Points (Primary Scoring)
+The main way to earn points is through managing stacks on the boss and Amber Monstrosity:
+
+#### Stack Point Calculation
+- **0→1 stacks**: 100 points
+- **1→2 stacks**: 200 points  
+- **2→3 stacks**: 400 points
+- **3→4 stacks**: 800 points
+- **And so on** (doubling each time)
+
+#### Stack Penalties
+- **Losing stacks**: -50% of the points you would have gained for that stack
+- **Stack timeout**: Stacks reset after 15 seconds of inactivity
+
+### Time-Based Multiplier (Boss Kill Bonus)
+When you defeat the boss, your total score is multiplied based on kill time. The multiplier decreases continuously, rewarding every second saved:
+
+- **≤30 seconds**: 4.0x - 5.5x multiplier (bonus for very fast kills)
+- **30-60 seconds**: 4.0x → 3.0x multiplier (smooth transition)
+- **60-90 seconds**: 3.0x → 2.0x multiplier (smooth transition)
+- **90-120 seconds**: 2.0x → 1.5x multiplier (smooth transition)
+- **120-180 seconds**: 1.5x → 1.2x multiplier (smooth transition)
+- **180-240 seconds**: 1.2x → 1.0x multiplier (smooth transition)
+- **>240 seconds**: 1.0x multiplier (no bonus)
+
+**Examples:**
+- 60 seconds = 3.0x multiplier
+- 62 seconds = 2.93x multiplier
+- 65 seconds = 2.83x multiplier
+- 90 seconds = 2.0x multiplier
+
+### Final Score Formula
+```
+Final Score = (Base Score + Stack Points) × Time Multiplier
+```
+
+### Scoring Strategy
+- **Focus on maintaining high stacks** - this is your primary source of points
+- **Kill the boss quickly** for maximum time multiplier
+- **Avoid losing stacks** - penalties are significant
+- **Balance damage dealing with stack management**
 
 ## 🎨 Features
 

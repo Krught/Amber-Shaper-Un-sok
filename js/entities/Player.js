@@ -56,9 +56,9 @@ class Player {
         this.behaviorTimer = 0;
         this.lastAbilityUsed = null; // Track last successfully used ability
         
-        // Create sprite as a blue circle
-        this.sprite = this.scene.add.circle(x, y, 20, 0x0066ff);
-        this.sprite.setStrokeStyle(2, 0x0044cc);
+        // Create sprite using mutatedConstruct image
+        this.sprite = this.scene.physics.add.sprite(x, y, 'mutatedConstruct');
+        this.sprite.setScale(0.5); // Scale down the image to appropriate size
         
         // Add physics body
         this.scene.physics.add.existing(this.sprite);
@@ -81,21 +81,9 @@ class Player {
     }
     
     createSprite() {
-        // Create a simple construct sprite
-        const graphics = this.scene.add.graphics();
-        graphics.fillStyle(0xffd700);
-        graphics.fillCircle(0, 0, 20);
-        graphics.lineStyle(3, 0xff6b35);
-        graphics.strokeCircle(0, 0, 20);
-        graphics.generateTexture('construct', 40, 40);
-        graphics.destroy();
-        
-        this.sprite = this.scene.physics.add.sprite(this.x, this.y, 'construct');
-        this.sprite.setScale(1.5);
-        
-        // Add willpower indicator
-        this.willpowerIndicator = this.scene.add.graphics();
-        this.updateWillpowerVisual();
+        // This method is no longer needed since sprite creation is handled in constructor
+        // Keeping it for potential future use but not calling it
+        console.log('createSprite() called but sprite already exists');
     }
     
     createEffects() {
@@ -166,14 +154,16 @@ class Player {
         // Update debuffs
         this.updateDebuffs(delta);
         
-        // Update target
-        this.updateTarget();
+        // Note: updateTarget() removed - targeting is now handled by click events only
         
         // Handle movement
         this.handleMovement();
         
-        // Update willpower visual
-        this.updateWillpowerVisual();
+        // Update visual feedback based on targeting and range
+        this.updateTargetingVisual();
+        
+        // Update willpower visual - DISABLED to remove green circle
+        // this.updateWillpowerVisual();
         
         // Update Amber Explosion cast
         this.updateAmberExplosionCast(delta);
@@ -209,6 +199,40 @@ class Player {
         // Use the physics body's setVelocity method
         if (this.sprite.body) {
             this.sprite.body.setVelocity(velocityX, velocityY);
+        }
+        
+        // Rotate the sprite to face the direction of movement
+        if (velocityX !== 0 || velocityY !== 0) {
+            // Calculate the angle based on velocity direction
+            const angle = Math.atan2(velocityY, velocityX);
+            // Convert to degrees and adjust so bottom of sprite faces movement direction
+            const degrees = (angle * 180 / Math.PI) + 90; // +90 to make bottom face direction
+            this.sprite.setRotation(degrees * Math.PI / 180);
+        }
+    }
+    
+    updateTargetingVisual() {
+        // Check if player has a valid target and is within range
+        if (this.target && this.target.sprite) {
+            const distanceToTarget = Phaser.Math.Distance.Between(
+                this.sprite.x, this.sprite.y,
+                this.target.sprite.x, this.target.sprite.y
+            );
+            
+            const maxRange = 50; // Amber Strike range
+            
+            // Check if target is valid (boss or amber-monstrosity) and in range
+            if ((this.target.type === 'boss' || this.target.type === 'amber-monstrosity') && 
+                distanceToTarget <= maxRange) {
+                // Turn red when in range of the specific target being targeted
+                this.sprite.setTint(0xff0000);
+            } else {
+                // Clear tint when not in range or no valid target
+                this.sprite.clearTint();
+            }
+        } else {
+            // Clear tint when no target
+            this.sprite.clearTint();
         }
     }
     
@@ -256,30 +280,56 @@ class Player {
         this.canBreakFree = (this.health / this.maxHealth) <= 0.2;
     }
     
+    die() {
+        console.log('Player died from running out of willpower!');
+        
+        // Trigger game over with appropriate message
+        if (this.scene) {
+            this.scene.endGame('You went berserk! The raid leader called wipe. The raid leader is strongly disappointed in you.');
+        }
+    }
+    
     updateWillpowerVisual() {
+        // Safety check - ensure willpowerIndicator exists
+        if (!this.willpowerIndicator) {
+            console.warn('Willpower indicator not initialized, creating it now');
+            this.willpowerIndicator = this.scene.add.graphics();
+        }
+        
         // Update willpower bar color based on remaining willpower
         const percentage = this.willpower / this.maxWillpower;
         
+        // Clear the previous indicator
+        this.willpowerIndicator.clear();
+        
+        // Set the color based on willpower percentage
+        let color;
         if (percentage > 0.6) {
-            this.sprite.setFillStyle(0x00ff00); // Green
+            color = 0x00ff00; // Green
         } else if (percentage > 0.3) {
-            this.sprite.setFillStyle(0xffff00); // Yellow
+            color = 0xffff00; // Yellow
         } else {
-            this.sprite.setFillStyle(0xff0000); // Red
+            color = 0xff0000; // Red
         }
+        
+        // Draw a small indicator circle around the player
+        this.willpowerIndicator.fillStyle(color, 0.7);
+        this.willpowerIndicator.fillCircle(this.sprite.x, this.sprite.y, 25);
+        this.willpowerIndicator.lineStyle(2, color, 1);
+        this.willpowerIndicator.strokeCircle(this.sprite.x, this.sprite.y, 25);
     }
     
     updateTarget() {
-        // Only target the boss, not the WoW class enemies (friendlies)
-        if (this.scene.boss && this.scene.boss.sprite) {
-            this.target = this.scene.boss;
-        } else {
-            this.target = null;
-        }
+        // // Only target the boss, not the WoW class enemies (friendlies)
+        // if (this.scene.boss && this.scene.boss.sprite) {
+        //     this.target = this.scene.boss;
+        // } else {
+        //     this.target = null;
+        // }
     }
     
     useAmberStrike() {
-        if (this.cooldowns['amber-strike'] > 0 || this.willpower < this.abilityCosts['amber-strike']) {
+        if (this.cooldowns['amber-strike'] > 0 || this.willpower < this.abilityCosts['amber-strike'] || this.castingAmberExplosion) {
             this.lastAbilityUsed = null; // Clear if ability couldn't be used
             return false;
         }
@@ -290,25 +340,42 @@ class Player {
         // Play effect
         this.effects['amber-strike'] = this.createAbilityEffect('amber-strike', this.sprite.x, this.sprite.y);
         
-        // Deal Nature damage to target (reduced from WoW values for game balance)
+        // Check if target is within range (touching distance - 50 pixels)
         if (this.target) {
-            let damage = Phaser.Math.Between(80, 120); // Reduced from 332,500-367,500
+            const distanceToTarget = Phaser.Math.Distance.Between(
+                this.sprite.x, this.sprite.y,
+                this.target.sprite.x, this.target.sprite.y
+            );
             
-            // Apply 99% damage reduction to boss when Amber Monstrosity is alive
-            if (this.target.type === 'boss' && this.scene.amberMonstrosity && this.scene.amberMonstrosity.health > 0) {
-                damage = Math.floor(damage * 0.01); // 99% damage reduction
-            }
+            const maxRange = 50; // Touching distance
             
-            this.target.takeDamage(damage);
-            this.target.addDebuff('amber-strike', 10, 60); // 10% damage increase, 1 minute
-            this.target.interruptSpellcasting(); // Interrupt spellcasting
-            this.damageDealt += damage;
-            
-            // Add stacks based on target type
-            if (this.target.type === 'boss') {
-                this.scene.addAmberShaperStack();
-            } else if (this.target.type === 'amber-monstrosity') {
-                this.scene.addMonstrosityStack();
+            if (distanceToTarget <= maxRange) {
+                // Target is in range - deal damage and add stacks
+                let damage = Phaser.Math.Between(80, 120); // Reduced from 332,500-367,500
+                // Apply 99% damage reduction to boss when Amber Monstrosity is alive
+                if (this.target.type === 'boss' && this.scene.amberMonstrosity && this.scene.amberMonstrosity.health > 0) {
+                    let reduced = damage * 0.01;
+                    damage = Math.max(1, Math.round(reduced)); // Always at least 1 if original damage >= 1
+                } else {
+                    damage = Math.round(damage);
+                }
+                
+                this.target.takeDamage(damage);
+                this.target.addDebuff('amber-strike', 10, 60); // 10% damage increase, 1 minute
+                this.target.interruptSpellcasting(); // Interrupt spellcasting
+                this.damageDealt += damage;
+                
+                // Add stacks based on target type
+                if (this.target.type === 'boss') {
+                    this.scene.addAmberShaperStack();
+                } else if (this.target.type === 'amber-monstrosity') {
+                    this.scene.addMonstrosityStack();
+                }
+                
+                console.log(`Amber Strike hit target at distance ${distanceToTarget.toFixed(1)} pixels`);
+            } else {
+                // Target is out of range - ability goes on cooldown but no damage/stacks
+                console.log(`Amber Strike missed - target too far (${distanceToTarget.toFixed(1)} pixels, max range: ${maxRange})`);
             }
         }
         
@@ -403,7 +470,14 @@ class Player {
         
         // Deal Physical damage to target
         if (this.target) {
-            const damage = Phaser.Math.Between(102000, 138000);
+            let damage = Phaser.Math.Between(102000, 138000);
+            // Apply 99% damage reduction to boss when Amber Monstrosity is alive
+            if (this.target.type === 'boss' && this.scene.amberMonstrosity && this.scene.amberMonstrosity.health > 0) {
+                let reduced = damage * 0.01;
+                damage = Math.max(1, Math.round(reduced));
+            } else {
+                damage = Math.round(damage);
+            }
             this.target.takeDamage(damage);
             this.damageDealt += damage;
         }
@@ -438,10 +512,12 @@ class Player {
             this.health = 0;
         }
         
-        // Visual feedback
-        this.sprite.setFillStyle(0xff0000);
+        // Visual feedback - temporary flash effect
+        const originalTint = this.sprite.tint;
+        this.sprite.setTint(0xff0000);
         this.scene.time.delayedCall(200, () => {
-            this.sprite.setFillStyle(0x0066ff); // Reset to blue
+            // Restore the original targeting visual state
+            this.updateTargetingVisual();
         });
     }
     
@@ -450,6 +526,10 @@ class Player {
             // Special check for Break Free
             if (ability === 'break-free') {
                 return this.canBreakFree;
+            }
+            // Special check for Amber Strike - cannot use while casting Amber Explosion
+            if (ability === 'amber-strike') {
+                return !this.castingAmberExplosion;
             }
             return true;
         }
@@ -462,7 +542,6 @@ class Player {
     
     destroy() {
         this.sprite.destroy();
-        this.willpowerIndicator.destroy();
         Object.values(this.effects).forEach(effect => effect.destroy());
     }
     
@@ -489,8 +568,7 @@ class Player {
         this.amberExplosionCastTime = 0;
         console.log('WARNING: Starting Amber Explosion cast! Use Struggle for Control to interrupt!');
         
-        // Visual indicator that we're casting
-        this.sprite.setFillStyle(0xff0000);
+        // Visual indicator removed - no longer turning red during cast
     }
     
     completeAmberExplosion() {
@@ -503,7 +581,7 @@ class Player {
         console.log('Amber Explosion completed! Player took 250,000 damage!');
         
         // Reset visual indicator
-        this.sprite.setFillStyle(0x0066ff); // Reset to blue
+        this.sprite.clearTint();
         
         // Trigger game over - player blew up
         if (this.scene) {

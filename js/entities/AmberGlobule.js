@@ -172,9 +172,9 @@ class AmberGlobule {
         this.scene.removeGlobule(this);
         
         // Destroy after effect
-        this.scene.time.delayedCall(1000, () => {
+        // this.scene.time.delayedCall(1000, () => {
             this.destroy();
-        });
+        // });
     }
     
     expire() {
