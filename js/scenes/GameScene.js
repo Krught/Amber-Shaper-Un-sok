@@ -1,11 +1,16 @@
 class GameScene extends Phaser.Scene {
     constructor() {
         super({ key: 'GameScene' });
+        this.reset();
+    }
+    
+    reset() {
+        // Reset all game state variables
         this.player = null;
         this.enemies = [];
         this.amberGlobules = [];
         this.boss = null;
-        this.amberMonstrosity = null; // New Amber Monstrosity boss
+        this.amberMonstrosity = null;
         this.gameTime = 0;
         this.phase = 1;
         this.phaseTimer = 0;
@@ -16,14 +21,36 @@ class GameScene extends Phaser.Scene {
         this.spawnTimer = 0;
         this.spawnRate = 1;
         this.uiManager = null;
-        this.monstrosityStacks = 0; // Stacks for Amber Monstrosity
+        this.monstrosityStacks = 0;
         this.lastMonstrosityStackTime = 0;
-        this.monstrosityStackTimeout = 15000; // 15 seconds
-        this.bossHPUpdateCount = 0; // Counter for debugging
+        this.monstrosityStackTimeout = 15000;
+        this.bossHPUpdateCount = 0;
+        this.amberShaperStacks = 0;
+        this.lastStackTime = 0;
+        this.stackTimeout = 15000;
+        this.targetIndicator = null;
+        this.amberSpawnTimer = 0;
+        this.amberSpawnInterval = 15000;
+        this.amberSpawnCount = 0;
+        
+        // Clear any existing event listeners
+        this.clearEventListeners();
+    }
+    
+    clearEventListeners() {
+        // Remove ability button event listeners to prevent duplication
+        document.querySelectorAll('.ability-btn').forEach(button => {
+            // Clone the button to remove all event listeners
+            const newButton = button.cloneNode(true);
+            button.parentNode.replaceChild(newButton, button);
+        });
     }
     
     create() {
         console.log('GameScene create() called');
+        
+        // Reset scene state to ensure clean initialization
+        this.reset();
         
         // Create background
         this.createBackground();
@@ -1216,5 +1243,69 @@ class GameScene extends Phaser.Scene {
         document.body.appendChild(amberShaperStacksContainer);
         
         console.log('Amber-Shaper stacks container created and added to DOM');
+    }
+    
+    cleanupUI() {
+        console.log('Cleaning up game UI elements...');
+        
+        // Clean up UIManager elements
+        if (this.uiManager) {
+            this.uiManager.cleanup();
+        }
+        
+        // Remove boss HP bars and stacks
+        const elementsToRemove = [
+            '.amber-shaper-hp-bar',
+            '.amber-shaper-stacks-container',
+            '.monstrosity-hp-bar',
+            '.monstrosity-stacks-container',
+            '.phase-transition-message',
+            '.stacks-reset-message',
+            '.monstrosity-stacks-reset-message',
+            '.fallback-game-over',
+            '.fallback-success'
+        ];
+        
+        elementsToRemove.forEach(selector => {
+            const elements = document.querySelectorAll(selector);
+            elements.forEach(element => {
+                console.log(`Removing element: ${selector}`);
+                element.remove();
+            });
+        });
+        
+        // Also remove any dynamically created game over or success screens
+        const gameOverScreens = document.querySelectorAll('[id*="game-over"]');
+        const successScreens = document.querySelectorAll('[id*="success"]');
+        
+        gameOverScreens.forEach(screen => {
+            if (screen.classList.contains('fallback-game-over')) {
+                screen.remove();
+            }
+        });
+        
+        successScreens.forEach(screen => {
+            if (screen.classList.contains('fallback-success')) {
+                screen.remove();
+            }
+        });
+        
+        console.log('Game UI cleanup complete');
+    }
+    
+    shutdown() {
+        console.log('GameScene shutdown - cleaning up UI and state...');
+        
+        // Clean up UI elements
+        this.cleanupUI();
+        
+        // Clear event listeners
+        this.clearEventListeners();
+        
+        // Reset scene state
+        this.reset();
+        
+        // Call parent shutdown
+        super.shutdown();
     }
 } 

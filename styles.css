@@ -791,3 +791,45 @@ button:active {
     font-size: 11px;
     color: #fff;
 } 
+
+/* Game Result Area on Title Screen */
+.game-result-area {
+    background: rgba(0, 0, 0, 0.8);
+    border: 2px solid #ff6b35;
+    border-radius: 10px;
+    padding: 20px;
+    margin: 20px 0;
+    text-align: center;
+    animation: fadeIn 0.5s ease-in;
+}
+
+.result-message {
+    font-size: 1.2em;
+    font-weight: bold;
+    margin-bottom: 10px;
+    padding: 10px;
+    border-radius: 5px;
+}
+
+.result-message.failure {
+    color: #ff4444;
+    background: rgba(255, 68, 68, 0.1);
+    border: 1px solid #ff4444;
+}
+
+.result-message.success {
+    color: #44ff44;
+    background: rgba(68, 255, 68, 0.1);
+    border: 1px solid #44ff44;
+}
+
+.final-score-display {
+    font-size: 1.1em;
+    color: #ffd700;
+    font-weight: bold;
+}
+
+@keyframes fadeIn {
+    from { opacity: 0; transform: translateY(-20px); }
+    to { opacity: 1; transform: translateY(0); }
+} 

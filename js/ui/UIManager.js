@@ -104,9 +104,9 @@ class UIManager {
     
     getCooldownTime(ability) {
         const cooldownTimes = {
-            'amber-strike': 3,
-            'struggle-control': 1,
-            'consume-amber': 5,
+            'amber-strike': 6,
+            'struggle-control': 6,
+            'consume-amber': 2,
             'break-free': 0
         };
         return cooldownTimes[ability] || 1;
@@ -411,5 +411,29 @@ class UIManager {
         if (willpowerText) {
             willpowerText.textContent = `${Math.floor(current)}/${Math.floor(max)}`;
         }
+    }
+    
+    cleanup() {
+        console.log('UIManager cleanup - removing temporary UI elements...');
+        
+        // Remove tooltips
+        this.hideAbilityTooltip();
+        
+        // Remove any temporary UI elements
+        const elementsToRemove = [
+            '.ability-tooltip',
+            '.phase-transition',
+            '.willpower-warning',
+            '.berserk-warning'
+        ];
+        
+        elementsToRemove.forEach(selector => {
+            const elements = document.querySelectorAll(selector);
+            elements.forEach(element => {
+                element.remove();
+            });
+        });
+        
+        console.log('UIManager cleanup complete');
     }
 } 

@@ -28,9 +28,9 @@ You play as a Mutated Construct, a transformed player character with unique abil
 - **Movement**: Arrow keys or WASD
 - **Abilities**: 
   - `1` or click button: Amber Strike
-  - `2` or click button: Consume Amber
-  - `3` or click button: Amber Scalpel
-  - `4` or click button: Smash
+  - `2` or click button: Struggle For Control
+  - `3` or click button: Consume Amber
+  - `4` or click button: Break Free
 
 ### Core Mechanics
 
@@ -43,28 +43,28 @@ You play as a Mutated Construct, a transformed player character with unique abil
 #### ⚡ Abilities
 
 1. **Amber Strike (1)**
-   - Cost: 5 Willpower
-   - Cooldown: 3 seconds
+   - Cost: 0 Willpower
+   - Cooldown: 6 seconds
    - Effect: Interrupts enemies and applies damage debuff
    - Priority: Use on enemy constructs to prevent them from going berserk
 
-2. **Consume Amber (2)**
+2. **Struggle For Control (2)**
+   - Cost: 8 Willpower
+   - Cooldown: 6 seconds
+   - Effect: CRITICAL: Use this to interrupt your own Amber Explosion cast!
+   - Strategy: Don't let yourself finish the Amber Explosion cast
+
+3. **Consume Amber (3)**
    - Cost: 0 Willpower
    - Cooldown: 5 seconds
-   - Effect: Restore 30 willpower from nearby amber globules
-   - Strategy: Use when willpower is low (below 30)
-
-3. **Amber Scalpel (3)**
-   - Cost: 10 Willpower
-   - Cooldown: 8 seconds
-   - Effect: Creates amber globules near your target
+   - Effect: Consume Amber 
    - Strategy: Use to create fuel for Consume Amber
 
 4. **Smash (4)**
-   - Cost: 15 Willpower
-   - Cooldown: 2 seconds
-   - Effect: Deal heavy damage to enemies
-   - Warning: Burns willpower quickly - use sparingly!
+   - Cost: 0 Willpower
+   - Cooldown: 0 seconds
+   - Effect: Available at 20% health - regain your natural form.
+   - Strategy: Use this to "win the game", but only if you are unable to kill Amber Shaper Un'sok
 
 ### 🎭 Game Phases
 
@@ -98,7 +98,7 @@ You play as a Mutated Construct, a transformed player character with unique abil
 ### ⚠️ Failure Conditions
 
 - **Willpower reaches 0**: You go berserk and wipe the raid
-- **Too many berserk enemies**: 3+ enemy constructs berserk = raid wipe
+- **Amber Explosion casted**: If you cast Amber Explosion, the raid fails
 - **Boss defeats you**: If you die, the raid fails
 
 ## 🏆 Scoring System

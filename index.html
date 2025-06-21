@@ -14,6 +14,15 @@
                 <h1>Amber-Shaper Un'sok</h1>
                 <h2>Construct Simulator</h2>
                 <p>Master the Mutated Construct mechanics!</p>
+                
+                <!-- Game Result Display Area -->
+                <div id="game-result-area" class="game-result-area hidden">
+                    <div id="result-message" class="result-message"></div>
+                    <div id="final-score-display" class="final-score-display">
+                        Final Score: <span id="title-score-value">0</span>
+                    </div>
+                </div>
+                
                 <button id="start-game">Start Training</button>
                 <button id="instructions-btn">Instructions</button>
             </div>
@@ -66,22 +75,7 @@
                     </div>
                 </div>
                 
-                <div id="game-over-screen" class="overlay hidden">
-                    <div class="game-over-content">
-                        <h2>Game Over</h2>
-                        <p id="game-over-reason">You failed!</p>
-                        <button id="restart-btn" class="btn">Restart Game</button>
-                    </div>
-                </div>
-                
-                <div id="success-screen" class="overlay hidden">
-                    <div class="success-content">
-                        <h2>Success!</h2>
-                        <p id="success-message">You jumped out before you exploded, good job!</p>
-                        <div id="success-score">Final Score: <span id="success-score-value">0</span></div>
-                        <button id="success-restart-btn" class="btn">Play Again</button>
-                    </div>
-                </div>
+                <!-- Removed game-over-screen and success-screen overlays -->
             </div>
             
             <div id="ability-bar">

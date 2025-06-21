@@ -47,7 +47,8 @@ class AmberShaperGame {
             startButton.addEventListener('click', () => {
                 console.log('Start game clicked');
                 this.showScreen('game');
-                this.startGame();
+                //this.startGame();
+                this.restartGame();
             });
         } else {
             console.error('Start game button not found!');
@@ -68,51 +69,6 @@ class AmberShaperGame {
             backButton.addEventListener('click', () => {
                 this.showScreen('title');
             });
-        }
-        
-        // Game over screen - use event delegation for buttons that might be in hidden divs
-        document.addEventListener('click', (e) => {
-            if (e.target.id === 'restart-btn') {
-                console.log('Restart button clicked - event:', e);
-                e.preventDefault();
-                e.stopPropagation();
-                this.restartGame();
-            } else if (e.target.id === 'success-restart-btn') {
-                console.log('Success restart button clicked - event:', e);
-                e.preventDefault();
-                e.stopPropagation();
-                this.restartGame();
-            }
-        });
-        
-        // Also try to set up direct listeners for immediate availability
-        const restartButton = document.getElementById('restart-btn');
-        const successRestartButton = document.getElementById('success-restart-btn');
-        const menuButton = document.getElementById('back-to-menu');
-        
-        console.log('Button setup - restartButton:', restartButton);
-        console.log('Button setup - successRestartButton:', successRestartButton);
-        
-        if (restartButton) {
-            restartButton.addEventListener('click', (e) => {
-                console.log('Restart button clicked - event:', e);
-                e.preventDefault();
-                e.stopPropagation();
-                this.restartGame();
-            });
-        } else {
-            console.error('Restart button not found!');
-        }
-        
-        if (successRestartButton) {
-            successRestartButton.addEventListener('click', (e) => {
-                console.log('Success restart button clicked - event:', e);
-                e.preventDefault();
-                e.stopPropagation();
-                this.restartGame();
-            });
-        } else {
-            console.error('Success restart button not found!');
         }
         
         // Ability buttons
@@ -188,6 +144,20 @@ class AmberShaperGame {
             return;
         }
         
+        // Clean up any leftover UI elements from previous games
+        if (this.game && this.game.game && this.game.game.scene) {
+            const gameScene = this.game.game.scene.getScene('GameScene');
+            if (gameScene && gameScene.cleanupUI) {
+                gameScene.cleanupUI();
+            }
+        }
+        
+        // Hide the game result area when starting a new game
+        const resultArea = document.getElementById('game-result-area');
+        if (resultArea) {
+            resultArea.classList.add('hidden');
+        }
+        
         this.score = 0;
         this.gameTime = 0;
         this.phase = 1;
@@ -210,6 +180,15 @@ class AmberShaperGame {
     
     stopGame() {
         console.log('Stopping game...');
+        
+        // Clean up UI elements from the game scene
+        if (this.game && this.game.game && this.game.game.scene) {
+            const gameScene = this.game.game.scene.getScene('GameScene');
+            if (gameScene && gameScene.cleanupUI) {
+                gameScene.cleanupUI();
+            }
+        }
+        
         if (this.game && this.game.game) {
             this.game.stopGame();
         }
@@ -218,18 +197,10 @@ class AmberShaperGame {
     restartGame() {
         console.log('Restarting game...');
         
-        // Hide game over screen
-        const gameOverScreen = document.getElementById('game-over-screen');
-        if (gameOverScreen) {
-            gameOverScreen.classList.add('hidden');
-            gameOverScreen.style.display = 'none';
-        }
-        
-        // Hide success screen
-        const successScreen = document.getElementById('success-screen');
-        if (successScreen) {
-            successScreen.classList.add('hidden');
-            successScreen.style.display = 'none';
+        // Hide game result area
+        const resultArea = document.getElementById('game-result-area');
+        if (resultArea) {
+            resultArea.classList.add('hidden');
         }
         
         // Show game UI
@@ -241,18 +212,28 @@ class AmberShaperGame {
         // Reset game state
         this.gameTime = 0;
         this.score = 0;
+        this.phase = 1;
+        this.updateUI();
         
-        // Restart the game scene
+        // Clean up any existing game scene completely
         if (this.game && this.game.game && this.game.game.scene) {
             const gameScene = this.game.game.scene.getScene('GameScene');
             if (gameScene) {
-                gameScene.scene.restart();
-            } else {
-                this.startGame();
+                console.log('Cleaning up existing GameScene...');
+                // Clean up UI elements
+                if (gameScene.cleanupUI) {
+                    gameScene.cleanupUI();
+                }
+                // Stop the scene completely
+                gameScene.scene.stop();
             }
-        } else {
-            this.startGame();
         }
+        
+        // Wait a moment for cleanup, then start fresh
+        setTimeout(() => {
+            console.log('Starting fresh game...');
+            this.startGame();
+        }, 100);
     }
     
     handleKeyPress(e) {
@@ -321,35 +302,45 @@ class AmberShaperGame {
     gameOver(reason) {
         console.log('Game Over:', reason);
         
-        // Show game over screen
-        const gameOverScreen = document.getElementById('game-over-screen');
-        const gameOverReason = document.getElementById('game-over-reason');
+        // Stop the game
+        this.stopGame();
         
-        if (gameOverScreen && gameOverReason) {
-            gameOverReason.textContent = reason;
-            gameOverScreen.classList.remove('hidden');
-            gameOverScreen.style.display = 'flex';
-        } else {
-            console.error('Game over screen elements not found!');
+        // Update the title screen with failure result
+        const resultArea = document.getElementById('game-result-area');
+        const resultMessage = document.getElementById('result-message');
+        const titleScoreValue = document.getElementById('title-score-value');
+        
+        if (resultArea && resultMessage && titleScoreValue) {
+            resultMessage.textContent = `Failed: ${reason}`;
+            resultMessage.className = 'result-message failure';
+            titleScoreValue.textContent = this.score;
+            resultArea.classList.remove('hidden');
         }
+        
+        // Return to title screen
+        this.showScreen('title');
     }
     
     gameSuccess(reason) {
         console.log('Game Success:', reason);
         
-        // Show success screen
-        const successScreen = document.getElementById('success-screen');
-        const successMessage = document.getElementById('success-message');
-        const successScoreValue = document.getElementById('success-score-value');
+        // Stop the game
+        this.stopGame();
         
-        if (successScreen && successMessage && successScoreValue) {
-            successMessage.textContent = reason;
-            successScoreValue.textContent = this.score;
-            successScreen.classList.remove('hidden');
-            successScreen.style.display = 'flex';
-        } else {
-            console.error('Success screen elements not found!');
+        // Update the title screen with success result
+        const resultArea = document.getElementById('game-result-area');
+        const resultMessage = document.getElementById('result-message');
+        const titleScoreValue = document.getElementById('title-score-value');
+        
+        if (resultArea && resultMessage && titleScoreValue) {
+            resultMessage.textContent = `Boss Killed: ${reason}`;
+            resultMessage.className = 'result-message success';
+            titleScoreValue.textContent = this.score;
+            resultArea.classList.remove('hidden');
         }
+        
+        // Return to title screen
+        this.showScreen('title');
     }
     
     addScore(points) {
